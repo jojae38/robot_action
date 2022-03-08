@@ -5,7 +5,7 @@ int main(int argc, char** argv)
   
   Pioneer Pioneer_(argc,argv);
   Pioneer_.run_robot();
-  RobotAction_server robot_action("robot_action_server");
+  // RobotAction_server robot_action("robot_action_server");
 
   return 0;
 }

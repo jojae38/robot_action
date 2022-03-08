@@ -18,9 +18,9 @@ using namespace std;
 const double camera_width = 0.44;//meter
 const double camera_length = 0.34;//meter
 const double Robot_wheel_r = 0.11;//meter
-const double Robot_center_to_camera_center = 0.34;//meter
+const double Robot_center_to_camera_center = 0.42;//meter
 int MARKER_FULL_num= 30000;
-int key_mode=0;
+
 #define PI 3.141592
 ros::Subscriber pose_vel_sub;
 ros::Publisher cmd_vel_pub;
@@ -101,7 +101,7 @@ class Pioneer
     bool turn_right();
     bool stop();
     bool back();
-    bool run_robot();
+    void run_robot();
     bool update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg);
     void add_path_or_marker(vector<POSITION> &Pos, int x,int y,int order_num);
 
@@ -126,7 +126,6 @@ class Pioneer
 Pioneer::Pioneer(int argc,char**argv)
 {
     mode=MODE::Stop;
-    key_mode=MODE::Stop;
     prev_mode=MODE::Stop;
 
     cv::VideoCapture cap(0);
@@ -157,11 +156,6 @@ Pioneer::Pioneer(int argc,char**argv)
 
     //Server Part//
     //add Marker and Moving position
-    add_path_or_marker(Move_Order,0,5,0);
-    add_path_or_marker(Move_Order,0,10,1);
-    add_path_or_marker(Move_Order,10,10,2);
-    add_path_or_marker(Move_Order,10,3,3);
-    add_path_or_marker(Move_Order,0,0,999);
     ROS_INFO("Starting Pioneer");
 }
 Pioneer::~Pioneer()
@@ -178,20 +172,37 @@ void Pioneer::Get_param()
     nh_private.param<int>("marker_num", marker_num, 10); 
     nh_private.param<int>("order_num", order_num, 5);
     
-    string marker="Marker ";
+    string marker;
     string marker_pos;
-    string order="Order ";
+    string order;
     string order_pos;
     for(int i=1;i<=marker_num;i++)
     {
+        int x=0;
+        int y=0;
+        marker="Marker";
         marker=marker+to_string(i);
-        nh_private.param<string>(marker,marker_pos,"(999,999)");
+        cout <<marker<<endl;
+        nh_private.param<string>(marker, marker_pos,"(10,10)");
+        int index=marker_pos.find(',');
+        x=atoi(marker_pos.substr(index+1).c_str());
+        marker_pos.erase(index,marker_pos.size()-1);
+        y=atoi(marker_pos.c_str());
+        add_path_or_marker(MARKER,x,y,i);
         
     }
     for(int i=1;i<=order_num;i++)
     {
+        int x=0;
+        int y=0;
+        order="Order";
         order=order+to_string(i);
-        nh_private.param<string>(order,order_pos,"(999,999)");
+        nh_private.param<string>(order,order_pos,"(10,10)");
+        int index=order_pos.find(',');
+        x=atoi(order_pos.substr(index+1).c_str());
+        order_pos.erase(index,order_pos.size()-1);
+        y=atoi(order_pos.c_str());
+        add_path_or_marker(Move_Order,x,y,i);
 
     }
 }
@@ -551,7 +562,7 @@ void Pioneer::is_destination_arrive()
         }
     }
 }
-bool Pioneer::run_robot()
+void Pioneer::run_robot()
 {   ros::Rate rate(20);
     while(ros::ok())
     {
@@ -621,8 +632,6 @@ bool Pioneer::run_robot()
         rate.sleep();
         ros::spinOnce();
     }
-    return true;
-
 }
 bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
 {
@@ -639,35 +648,6 @@ bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
     ROBOT.th=tf::getYaw(pose.getRotation());
     return true;
 }
-// void keycallback(const std_msgs::Char::ConstPtr &msg)
-// {
-//     if(msg->data=='w'||msg->data=='w')
-//     {
-//         key_mode=MODE::Front;
-//         ROS_INFO("CHANGE_MODE -> FRONT");
-//     }
-//     else if(msg->data=='s'||msg->data=='S')
-//     {
-//        key_mode=MODE::Stop;
-//         ROS_INFO("CHANGE_MODE -> STOP");
-//     }
-//     else if(msg->data=='d'||msg->data=='D')
-//     {
-//         key_mode=MODE::Right;
-//         ROS_INFO("CHANGE_MODE -> RIGHT");
-//     }
-//     else if(msg->data=='a'||msg->data=='A')
-//     {
-//         key_mode=MODE::Left;
-//         ROS_INFO("CHANGE_MODE -> LEFT");
-//     }
-//     else if(msg->data=='x'||msg->data=='X')
-//     {
-//         key_mode=MODE::Back;
-//         ROS_INFO("CHANGE_MODE -> BACK");
-//     }
-//     ROS_INFO("GET KEY %c",msg->data);
-// }
 
 void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
 {
