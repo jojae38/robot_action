@@ -11,24 +11,7 @@ int main(int argc, char** argv)
   
   //Action init
   bool finished_before_timeout = robot_client.waitForResult(ros::Duration(1.0));
-  // std::cout <<"Type in Order number: ";
-  // while(true)
-  // {
-  //   std::cin>>order_num;
-  //   if(order_num>=1&&order_num<=10)
-  //   {
-  //     ROS_INFO("Order_number: %d",order_num);
-  //     break;
-  //   }
-  //   else
-  //   {
-  //     ROS_INFO("Over Value or Not int please try again");
-  //   }
-  // }
-  while(order_num)
-  {
-
-  }
+  
   while(!finished_before_timeout)
   {
       finished_before_timeout = robot_client.waitForResult(ros::Duration(1.0));

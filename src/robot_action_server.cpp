@@ -1,15 +1,52 @@
 #include "robot_control.hpp"
+void func1();
+void func2();
+void func3();
 
+Pioneer Pioneer_;
 int main(int argc, char** argv)
 {
-  
-  Pioneer Pioneer_(argc,argv);
-  Pioneer_.run_robot();
+  ros::init(argc,argv,"Robot_control");
+  Pioneer_.Get_param();//add Marker & Order & speed & angle_speed
   // RobotAction_server robot_action("robot_action_server");
-
+  thread t1(func1);
+  thread t2(func2);
+  ros::MultiThreadedSpinner spinner;
+  spinner.spin();
+  t1.join();
+  t2.join();
   return 0;
 }
-
+void func1()
+{
+  ros::Rate rate_1(10);
+  while(ros::ok())
+  {
+    Pioneer_.run_camera();
+    rate_1.sleep();
+    ROS_INFO("func1 activated");
+  }
+}
+void func2()
+{
+  ros::Rate rate_2(20);
+  while(ros::ok())
+  {
+    Pioneer_.run_robot();
+    rate_2.sleep();
+    ROS_INFO("func2 activated");
+  }
+}
+void func3()
+{
+  ros::Rate rate_3(100);
+  while(ros::ok())
+  {
+    Robot_Action Robot_Action_("Robot_action");
+    rate_3.sleep();
+    ROS_INFO("func2 activated");
+  }
+}
 // Pioneer Pioneer_;
 
 

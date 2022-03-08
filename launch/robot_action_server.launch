@@ -2,10 +2,9 @@
 	<node name="robot_action_server_node" pkg="robot_action" type="robot_action_server" output="screen"> 
 		<param name="speed" type="double" value="0.1"/>
 		<param name="angle_speed" type="double" value="0.1"/>
-        <param name="marker_num" type="int" value="10"/>
-        <param name="order_num" type="int" value="5"/>
 		<!-- *3.14 -->
         <!-- MARKER -->
+        <param name="marker_num" type="int" value="10"/>
         <param name="Marker1" type="string" value="1,1"/>
         <param name="Marker2" type="string" value="2,2"/>
         <param name="Marker3" type="string" value="3,3"/>
@@ -17,6 +16,7 @@
         <param name="Marker9" type="string" value="4,3"/>
         <param name="Marker10" type="string" value="3,4"/>
         <!-- ORDER_POS -->
+        <param name="order_num" type="int" value="5"/>
         <param name="Order1" type="string" value="1,2"/>
         <param name="Order2" type="string" value="2,4"/>
         <param name="Order3" type="string" value="4,7"/>
