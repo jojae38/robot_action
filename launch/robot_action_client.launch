@@ -1,0 +1,5 @@
+<launch>
+	<node name="robot_action_client_node" pkg="robot_action" type="robot_action_client" output="screen"> 
+		<!-- *3.14 -->
+	</node>
+</launch>

@@ -1,0 +1,27 @@
+#goal definition
+# int32[] Pos
+string order 
+#0 - INIT 1 - GO 2 - PAUSE 
+---
+#result definition
+string res_Status
+#[current position]
+#[Used Time]
+---
+#feedback
+string curr_Status
+
+#[current position]
+#[current order num]
+#[current ordered position]
+#[running time]
+#[estimated arrirve time]
+
+# #goal definition
+# int32 order
+# ---
+# #result definition
+# int32[] sequence
+# ---
+# #feedback
+# int32[] sequence
