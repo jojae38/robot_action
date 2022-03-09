@@ -1,71 +1,82 @@
 #include "robot_control.hpp"
-void func1();
-void func2();
-void func3();
 
-Pioneer Pioneer_;
-int main(int argc, char** argv)
+ros::Publisher start;
+ros::Subscriber server_feedback;
+ros::Subscriber server_result;
+class Robot_Action
 {
-  ros::init(argc,argv,"Robot_control");
-  Pioneer_.Get_param();//add Marker & Order & speed & angle_speed
-  // RobotAction_server robot_action("robot_action_server");
-  thread t1(func1);
-  thread t2(func2);
-  ros::MultiThreadedSpinner spinner;
-  spinner.spin();
-  t1.join();
-  t2.join();
+    protected:
+    ros::NodeHandle nh_;
+    actionlib::SimpleActionServer<robot_action::robot_actionAction> as_; // NodeHandle instance must be created before this line. Otherwise strange error occurs.
+    std::string action_name_;
+    // create messages that are used to published feedback/result
+    robot_action::robot_actionFeedback feedback_;
+    robot_action::robot_actionResult result_;
+
+    public:
+
+    Robot_Action(std::string name):as_(nh_,name,boost::bind(&Robot_Action::executeCB,this,_1),false),action_name_(name)
+    {
+      
+      as_.start();
+    }
+    ~Robot_Action(void)
+    {}
+
+    void executeCB(const robot_action::robot_actionGoalConstPtr &goal)
+    {
+      ros::Rate r(2);
+      // as_.isPreemptRequested();
+      // as_.setPreempted();
+      bool success=false;
+      while(ros::ok())
+      {
+        if(success)
+        {
+        result_.res_Status="Arrive";
+        ROS_INFO("SAFELY Arrirved at Destination");
+        as_.setSucceeded(result_);
+        break;
+        }
+        else
+        {
+          if(goal->order=="START")
+          {
+            ROS_INFO("run");
+            feedback_.curr_Status="aaa";
+            as_.publishFeedback(feedback_);
+            cout << goal->order<<endl;
+            if(as_.isNewGoalAvailable())
+            {
+               as_.acceptNewGoal();
+            }
+            //robot 위치 감지
+          }
+          else
+          {
+            ROS_INFO("waiting");
+            feedback_.curr_Status="bbb";
+            as_.publishFeedback(feedback_);
+            cout << goal->order<<endl;
+            if(as_.isNewGoalAvailable())
+            {
+               as_.acceptNewGoal();
+            }
+           
+          }
+        }
+         r.sleep();
+      }
+      
+     
+    }
+    
+};
+int main(int argc, char ** argv)
+{
+  ros::init(argc, argv, "robot_action_server");
+  Robot_Action Robot_Action_("robot_action");
+  ros::spin();
+
   return 0;
 }
-void func1()
-{
-  ros::Rate rate_1(10);
-  while(ros::ok())
-  {
-    Pioneer_.run_camera();
-    rate_1.sleep();
-    ROS_INFO("func1 activated");
-  }
-}
-void func2()
-{
-  ros::Rate rate_2(20);
-  while(ros::ok())
-  {
-    Pioneer_.run_robot();
-    rate_2.sleep();
-    ROS_INFO("func2 activated");
-  }
-}
-void func3()
-{
-  ros::Rate rate_3(100);
-  while(ros::ok())
-  {
-    Robot_Action Robot_Action_("Robot_action");
-    rate_3.sleep();
-    ROS_INFO("func2 activated");
-  }
-}
-// Pioneer Pioneer_;
-
-
-// int main(int argc, char **argv)
-// {
-//     ros::init(argc,argv,"Robot_control");
-//     ros::NodeHandle n;
-
-//     pose_vel_sub=n.subscribe("/RosAria/pose",10,poseCallback);
-//     key_input=n.subscribe("key_input",10,keycallback);
-//     cmd_vel_pub=n.advertise<geometry_msgs::Twist>("/RosAria/cmd_vel",10);
-//     // pose_vel_pub=n.advertise<nav_msgs::Odometry>("/RosAria/pose",1);
-//     Pioneer_.Get_param();
-//     cv::VideoCapture cap(0);
-//     if(!cap.isOpened())
-// 		std::cerr<<"Camera open failed!"<<std::endl;
-//     else
-//         ROS_INFO("Camera model [ELP-USBFHD06H-L21] connected");
-        
-//     Pioneer_.run_robot(cap);
-//     return 0;    
-// }

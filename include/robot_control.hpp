@@ -12,8 +12,7 @@
 #include <actionlib/server/simple_action_server.h>
 #include <actionlib/client/simple_action_client.h>
 #include <robot_action/robot_actionAction.h>
-#include <thread>
-using std::thread;
+#include <std_msgs/String.h>
 
 using namespace std;
 
@@ -24,10 +23,13 @@ const double Robot_center_to_camera_center = 0.42;//meter
 int MARKER_FULL_num= 30000;
 
 #define PI 3.141592
-ros::Subscriber pose_vel_sub;
+//ROBOT
 ros::Publisher cmd_vel_pub;
-ros::Publisher pose_vel_pub;
 ros::Subscriber key_input;
+
+//SERVER
+ros::Publisher robot_result;
+ros::Publisher robot_feedback;
 enum MODE {Stop,Front,Right,Left,Back,Init};
 enum MARKER_MODE {No_Marker,Find_Marker,Goto_Marker,Position_adjust};
 struct POSITION
@@ -88,6 +90,7 @@ class Pioneer
     vector<POSITION> MARKER;
     vector<POSITION> PATH;
     cv::VideoCapture capture;
+    
 
     //ACTION//
     public:
@@ -123,11 +126,6 @@ class Pioneer
     void draw_marker_at(double x,double y,cv::Mat &map,struct COLOR color);
     int convert_world_pos_x(double x);
     int convert_world_pos_y(double y);
-
-    void executeCB(const robot_action::robot_actionGoalConstPtr &goal)
-  {
-    ROS_INFO("spin");
-  }
 };
   
 Pioneer::Pioneer()
@@ -155,8 +153,7 @@ Pioneer::Pioneer()
     set_Visual_map(14,700,700);
     order_num=0;
     Arrive=false;
-    //Server Part//
-    
+
     ROS_INFO("Starting Pioneer");
 }
 Pioneer::~Pioneer()
@@ -167,8 +164,13 @@ Pioneer::~Pioneer()
 void Pioneer::Get_param()
 {
     ros::NodeHandle nh_;
+    //Robot
     key_input=nh_.subscribe("key_input",10,&Pioneer::keycallback,this);
     cmd_vel_pub=nh_.advertise<geometry_msgs::Twist>("/RosAria/cmd_vel",10);
+
+    //Server
+    robot_result=nh_.advertise<std_msgs::String>("",1);
+    robot_feedback=nh_.advertise<std_msgs::String>("",10);
 
     ros::NodeHandle nh_private("~");
     nh_private.param<double>("speed", speed, 0.2); 
@@ -181,14 +183,26 @@ void Pioneer::Get_param()
     string marker_pos;
     string order;
     string order_pos;
+
+    string robot_pos;
+    nh_private.param<string>("ROBOT_POS", robot_pos,"0,0");
+    int x=0;
+    int y=0;
+    int index=0;
+    x=atoi(robot_pos.substr(index+1).c_str());
+    marker_pos.erase(index,robot_pos.size()-1);
+    y=atoi(robot_pos.c_str());
+    ROBOT.x=x;
+    ROBOT.y=y;
+    ROS_INFO("STARTING ROBOT_x: %f ROBOT_y: %f ROBOT_th: %f",ROBOT.x,ROBOT.y,ROBOT.th);
     for(int i=1;i<=marker_num;i++)
     {
-        int x=0;
-        int y=0;
+        x=0;
+        y=0;
         marker="Marker";
         marker=marker+to_string(i);
-        nh_private.param<string>(marker, marker_pos,"(10,10)");
-        int index=marker_pos.find(',');
+        nh_private.param<string>(marker, marker_pos,"10,10");
+        index=marker_pos.find(',');
         x=atoi(marker_pos.substr(index+1).c_str());
         marker_pos.erase(index,marker_pos.size()-1);
         y=atoi(marker_pos.c_str());
@@ -198,17 +212,16 @@ void Pioneer::Get_param()
     ROS_INFO("%d MARKER SET",marker_num);
     for(int i=1;i<=order_num;i++)
     {
-        int x=0;
-        int y=0;
+        x=0;
+        y=0;
         order="Order";
         order=order+to_string(i);
-        nh_private.param<string>(order,order_pos,"(10,10)");
-        int index=order_pos.find(',');
+        nh_private.param<string>(order,order_pos,"10,10");
+        index=order_pos.find(',');
         x=atoi(order_pos.substr(index+1).c_str());
         order_pos.erase(index,order_pos.size()-1);
         y=atoi(order_pos.c_str());
         add_path_or_marker(Move_Order,x,y,i);
-
     }
     ROS_INFO("%d ORDER_SET",order_num);
 }
@@ -565,9 +578,9 @@ void Pioneer::is_destination_arrive()
 }
 void Pioneer::run_robot()
 {   
-    // ros::Rate rate(20);
-    // while(ros::ok())
-    // {
+    ros::Rate rate(20);
+    while(ros::ok())
+    {
         // run_camera();
         // is_marker_on_sight();
         if(mode!=prev_mode)
@@ -627,9 +640,9 @@ void Pioneer::run_robot()
         }
         cmd_vel_pub.publish(vel_msg);
         // mode=MODE::Stop;
-    //     rate.sleep();
-    //     ros::spinOnce();
-    // }
+        rate.sleep();
+        ros::spinOnce();
+    }
 }
 bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
 {
@@ -676,30 +689,3 @@ void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
     }
     ROS_INFO("GET KEY %c",msg->data);
 }
-
-class Robot_Action
-{
-    protected:
-    ros::NodeHandle nh_;
-    actionlib::SimpleActionServer<robot_action::robot_actionAction> as_; // NodeHandle instance must be created before this line. Otherwise strange error occurs.
-    std::string action_name_;
-    // create messages that are used to published feedback/result
-    robot_action::robot_actionActionFeedback feedback_;
-    robot_action::robot_actionActionResult result_;
-
-    public:
-
-    Robot_Action(std::string name):as_(nh_,name,boost::bind(&Robot_Action::executeCB,this,_1),false),action_name_(name){as_.start();}
-    ~Robot_Action(void)
-    {}
-
-    void executeCB(const robot_action::robot_actionActionConstPtr &goal)
-    {
-        ROS_INFO("RUN");
-    }
-    void run()
-    {
-
-    }
-    
-};
