@@ -228,19 +228,19 @@ target_link_libraries(
   robot_action_server
   ${catkin_LIBRARIES}
 )
-
+add_dependencies(robot_action_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # add_dependencies(
 #   robot_action_server
 #   ${actionlib_tutorials_EXPORTED_TARGETS}
 # )
-add_dependencies(robot_action_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# add_executable(robot_action_client src/robot_action_client.cpp)
 
-# target_link_libraries(
-#   robot_action_client
-#   ${catkin_LIBRARIES}
-# )
+add_executable(robot_action_client src/robot_action_client.cpp)
 
+target_link_libraries(
+  robot_action_client
+  ${catkin_LIBRARIES}
+)
+add_dependencies(robot_action_client ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # add_dependencies(
 #   robot_action_client
 #   ${actionlib_tutorials_EXPORTED_TARGETS}
