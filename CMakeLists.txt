@@ -222,6 +222,16 @@ include_directories(
 #   ${actionlib_tutorials_EXPORTED_TARGETS}
 # )
 
+add_executable(robot_control src/robot_control.cpp)
+
+target_link_libraries( 
+  robot_control
+  ${catkin_LIBRARIES}
+)
+add_dependencies(robot_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+
+
 add_executable(robot_action_server src/robot_action_server.cpp)
 
 target_link_libraries( 

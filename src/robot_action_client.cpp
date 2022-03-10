@@ -8,12 +8,12 @@ int main(int argc, char** argv)
   robot_client.waitForServer();
   ROS_INFO("Robot_action_server_ON, sending goal.");
   robot_action::robot_actionGoal goal;
-  goal.order="START";
+  goal.order="STOP";
   robot_client.sendGoal(goal);
   ROS_INFO("first");
   ros::Duration five_second(5.0);
   five_second.sleep();
-  goal.order="STAR";
+  goal.order="START";
   robot_client.sendGoal(goal);
   ROS_INFO("second");
   //Action init

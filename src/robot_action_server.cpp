@@ -1,5 +1,5 @@
 #include "robot_control.hpp"
-
+string order;
 ros::Publisher start;
 ros::Subscriber server_feedback;
 ros::Subscriber server_result;
@@ -28,9 +28,12 @@ class Robot_Action
       ros::Rate r(2);
       // as_.isPreemptRequested();
       // as_.setPreempted();
+      order=goal->order;
       bool success=false;
       while(ros::ok())
       {
+        if(as_.isNewGoalAvailable())
+			    order=as_.acceptNewGoal()->order;
         if(success)
         {
         result_.res_Status="Arrive";
@@ -40,16 +43,12 @@ class Robot_Action
         }
         else
         {
-          if(goal->order=="START")
+          if(order=="START")
           {
             ROS_INFO("run");
             feedback_.curr_Status="aaa";
             as_.publishFeedback(feedback_);
-            cout << goal->order<<endl;
-            if(as_.isNewGoalAvailable())
-            {
-               as_.acceptNewGoal();
-            }
+            cout << order <<endl;
             //robot 위치 감지
           }
           else
@@ -57,18 +56,11 @@ class Robot_Action
             ROS_INFO("waiting");
             feedback_.curr_Status="bbb";
             as_.publishFeedback(feedback_);
-            cout << goal->order<<endl;
-            if(as_.isNewGoalAvailable())
-            {
-               as_.acceptNewGoal();
-            }
-           
+            cout << order <<endl;
           }
         }
          r.sleep();
       }
-      
-     
     }
     
 };
