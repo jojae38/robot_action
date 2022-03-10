@@ -12,7 +12,7 @@ class Robot_Action
     // create messages that are used to published feedback/result
     robot_action::robot_actionFeedback feedback_;
     robot_action::robot_actionResult result_;
-
+    std_msgs::String start_msg;
     public:
 
     Robot_Action(std::string name):as_(nh_,name,boost::bind(&Robot_Action::executeCB,this,_1),false),action_name_(name)
@@ -25,6 +25,8 @@ class Robot_Action
 
     void executeCB(const robot_action::robot_actionGoalConstPtr &goal)
     {
+      start=nh_.advertise<std_msgs::String>("/Start",1);
+      start_msg.data="start";
       ros::Rate r(2);
       // as_.isPreemptRequested();
       // as_.setPreempted();
@@ -43,11 +45,12 @@ class Robot_Action
         }
         else
         {
-          if(order=="START")
+          if(order=="start")
           {
             ROS_INFO("run");
             feedback_.curr_Status="aaa";
             as_.publishFeedback(feedback_);
+            start.publish(start_msg);
             cout << order <<endl;
             //robot 위치 감지
           }

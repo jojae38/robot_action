@@ -16,6 +16,13 @@
 
 using namespace std;
 
+  cv::Mat camMatrix = (cv::Mat_<double>(3, 3) << 4.7717248258065513e+02, 0., 3.4345166112868361e+02, 0.,
+                       4.7877303179533322e+02, 2.1840674677502400e+02, 0., 0., 1.);
+  cv::Mat distCoeffs = (cv::Mat_<double>(5, 1) << -5.0679364100294742e-02, 1.9604492374058202e-01,
+                        -8.2735393054366954e-04, -6.8036803338709421e-05,
+                        -2.0917602681902503e-01); // Assuming no lens distortion
+
+
 const double camera_width = 0.44;//meter
 const double camera_length = 0.34;//meter
 const double Robot_wheel_r = 0.11;//meter
@@ -26,7 +33,8 @@ int MARKER_FULL_num= 30000;
 //ROBOT
 ros::Publisher cmd_vel_pub;
 ros::Subscriber key_input;
-
+ros::Subscriber stop_status;
+ros::Subscriber start_status;
 //SERVER
 ros::Publisher robot_result;
 ros::Publisher robot_feedback;
@@ -93,6 +101,8 @@ class Pioneer
     
 
     //ACTION//
+    bool pause_stat;
+    bool start_stat;
     public:
     Pioneer();
     ~Pioneer();
@@ -113,6 +123,8 @@ class Pioneer
     void is_direction_match();
     void is_destination_arrive();
     void keycallback(const std_msgs::Char::ConstPtr &msg);
+    void pausecallback(const std_msgs::String::ConstPtr &msg);
+    void startcallback(const std_msgs::String::ConstPtr &msg);
     //Camera Part
     bool is_marker_on_sight();
     bool Publish_image();
@@ -131,6 +143,8 @@ class Pioneer
 Pioneer::Pioneer()
 { 
     mode=MODE::Stop;
+    pause_stat=false;
+    start_stat=false;
     prev_mode=MODE::Stop;
 
     cv::VideoCapture cap(0);
@@ -167,7 +181,8 @@ void Pioneer::Get_param()
     //Robot
     key_input=nh_.subscribe("key_input",10,&Pioneer::keycallback,this);
     cmd_vel_pub=nh_.advertise<geometry_msgs::Twist>("/RosAria/cmd_vel",10);
-
+    stop_status=nh_.subscribe("/pause",1,&Pioneer::pausecallback,this);
+    start_status=nh_.subscribe("/Start",1,&Pioneer::startcallback,this);
     //Server
     robot_result=nh_.advertise<std_msgs::String>("",1);
     robot_feedback=nh_.advertise<std_msgs::String>("",10);
@@ -302,15 +317,19 @@ void Pioneer::set_cmd_vel(double x,double th)
 }
 bool Pioneer::run_camera()
 {
-    
+    cv::Mat un_proceed_frame;
     cv::Mat frame;
-    cv::Mat resized_frame;
-    capture>>frame;
-	if(frame.empty())
+    // cv::Mat resized_frame;
+    capture>>un_proceed_frame;
+	if(un_proceed_frame.empty())
 	    return -1;
+    cv::namedWindow("un_proceed_frame");
+    cv::moveWindow("un_proceed_frame",865,0);
+
     cv::namedWindow("frame");
     cv::moveWindow("frame",10,0);
-
+    undistort(un_proceed_frame,frame,camMatrix,distCoeffs);
+    
     int marker_value=0;
     /*RGB*/
     // for(int i=1;i<frame.rows-1;i++)
@@ -356,47 +375,47 @@ bool Pioneer::run_camera()
             }
         }
         int size=125;
-        for(int i=x_pos-size;i<x_pos+size;i++)
-        {
-            if(i<0||i>=mod_frame.rows)
-            {
-                continue;
-            }
-            else
-            {
-                if(y_pos+size>mod_frame.cols)
-                {
-                    y_pos=mod_frame.cols-size-1;
-                }
-                if(y_pos-size<0)
-                {
-                    y_pos=size;
-                }
-                frame.at<cv::Vec3b>(i,y_pos+size)={0,255,0};
-                frame.at<cv::Vec3b>(i,y_pos-size)={0,255,0};
+        // for(int i=x_pos-size;i<x_pos+size;i++)
+        // {
+        //     if(i<0||i>=mod_frame.rows)
+        //     {
+        //         continue;
+        //     }
+        //     else
+        //     {
+        //         if(y_pos+size>mod_frame.cols)
+        //         {
+        //             y_pos=mod_frame.cols-size-1;
+        //         }
+        //         if(y_pos-size<0)
+        //         {
+        //             y_pos=size;
+        //         }
+        //         frame.at<cv::Vec3b>(i,y_pos+size)={0,255,0};
+        //         frame.at<cv::Vec3b>(i,y_pos-size)={0,255,0};
                 
-            }
-        }
-        for(int i=y_pos-size;i<y_pos+size;i++)
-        {
-            if(i<0||i>=mod_frame.cols)
-            {
-                continue;
-            }
-            else
-            {
-                if(x_pos+size>mod_frame.rows)
-                {
-                    x_pos=mod_frame.rows-size-1;
-                }
-                if(x_pos-size<0)
-                {
-                    x_pos=size;
-                }
-                frame.at<cv::Vec3b>(x_pos+size,i)={0,255,0};
-                frame.at<cv::Vec3b>(x_pos-size,i)={0,255,0};
-            }
-        }
+        //     }
+        // }
+        // for(int i=y_pos-size;i<y_pos+size;i++)
+        // {
+        //     if(i<0||i>=mod_frame.cols)
+        //     {
+        //         continue;
+        //     }
+        //     else
+        //     {
+        //         if(x_pos+size>mod_frame.rows)
+        //         {
+        //             x_pos=mod_frame.rows-size-1;
+        //         }
+        //         if(x_pos-size<0)
+        //         {
+        //             x_pos=size;
+        //         }
+        //         frame.at<cv::Vec3b>(x_pos+size,i)={0,255,0};
+        //         frame.at<cv::Vec3b>(x_pos-size,i)={0,255,0};
+        //     }
+        // }
         ROS_INFO("X_POS = %d",int(x_pos));
         ROS_INFO("Y_POS = %d",int(y_pos));
 
@@ -423,8 +442,29 @@ bool Pioneer::run_camera()
     MARKER_pixel=marker_value;
     // ROS_INFO("Marker_value %d",MARKER_pixel);
     // number++;
-    }   
+    }
+    //For Calculate
+    for(int i=0;i<frame.rows;i++)
+    {
+        for(int j=1;j<8;j++)
+        {
+            frame.at<cv::Vec3b>(i,j*100)={0,0,0};
+            un_proceed_frame.at<cv::Vec3b>(i,j*100)={0,0,0};
+        }
+    }
+    for(int i=0;i<frame.cols;i++)
+    {
+        for(int j=1;j<6;j++)
+        {
+            frame.at<cv::Vec3b>(j*100,i)={0,0,0};
+            un_proceed_frame.at<cv::Vec3b>(j*100,i)={0,0,0};
+
+        }
+   
+    }
+       
     cv::imshow("frame",frame);
+    cv::imshow("un_proceed_frame",un_proceed_frame);
     /*HSV*/
 
     /*RGB RESIZED - if frame is to big to run*/
@@ -450,7 +490,7 @@ bool Pioneer::run_camera()
     // cv::imshow("frame",resized_frame);
     /*RGB RESIZED*/
     // cout << marker_value<<endl;
-    Pioneer::visualize();
+    // Pioneer::visualize();
     if(cv::waitKey(10)==27)
         return 0;
     return true;
@@ -581,8 +621,8 @@ void Pioneer::run_robot()
     ros::Rate rate(20);
     while(ros::ok())
     {
-        // run_camera();
-        // is_marker_on_sight();
+        run_camera();
+        is_marker_on_sight();
         if(mode!=prev_mode)
         {
             ROS_INFO("MODE_CHANGE TO %d",mode);
@@ -638,6 +678,11 @@ void Pioneer::run_robot()
         {
             Pioneer::back();
         }
+        if(!start_stat||pause_stat||Arrive)
+        {
+            mode=MODE::Stop;
+            Pioneer::stop();
+        }
         cmd_vel_pub.publish(vel_msg);
         // mode=MODE::Stop;
         rate.sleep();
@@ -688,4 +733,30 @@ void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
         ROS_INFO("CHANGE_MODE -> BACK");
     }
     ROS_INFO("GET KEY %c",msg->data);
+}
+void Pioneer::pausecallback(const std_msgs::String::ConstPtr &msg)
+{
+    if(msg->data=="STOP")
+    {
+        ROS_INFO("Pioneer STOP");
+      pause_stat=true;  
+    }
+    else
+    {
+        ROS_INFO("Pioneer RESUME");
+        pause_stat=false;
+    }
+    
+}
+void Pioneer::startcallback(const std_msgs::String::ConstPtr &msg)
+{
+   if(msg->data=="START")
+    {
+        ROS_INFO("Pioneer START");
+      start_stat=true;  
+    }
+    else
+    {
+        start_stat=false;
+    }
 }
