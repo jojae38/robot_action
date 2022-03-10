@@ -1,0 +1,43 @@
+
+
+#status {
+    margin-top: 50px;
+    margin-left: 50px;
+}
+#btn {
+    display: flex;
+    flex-direction: column;
+    width: 200px;
+    margin-left: 50px;
+}
+
+#start {
+    height: 40px;
+    
+    font-size: 22px;
+    font-weight: 400;
+}
+
+#stop {
+    height: 40px;
+    
+    font-size: 22px;
+    font-weight: 400;
+}
+
+#status_title {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+#status_value {
+    font-size: 22px;
+    font-weight: 600;
+    color: blue;
+}
+
+#btn_title {
+    font-size: 22px;
+    font-weight: 500;
+    margin-top: 30px;
+}

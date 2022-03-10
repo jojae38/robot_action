@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="index.css">
+    <script type="text/javascript" src="eventemitter2.js"></script>
+    <script type="text/javascript" src="roslib.js"></script>
+    <script type="text/javascript" src="ros3d.js"></script>
+    <title>OJT GUI</title>
+
+
+    <script type="text/javascript">
+        var ros = new ROSLIB.Ros({
+            url: "ws://localhost:9090",
+        });
+
+        ros.on("connection", function () {
+            console.log("Connected to websocket server.");
+        });
+
+        ros.on("error", function (error) {
+            console.log("Error connecting to websocket server: ", error);
+        });
+
+        ros.on("close", function () {
+            console.log("Connection to websocket server closed.");
+        });
+
+        var actionNodeClient = new ROSLIB.ActionClient({
+            ros: ros,
+            serverName: "/ojtAction", //액션서버 이름
+            actionName: "robot_action/robot_action", //정해진 액션 파일 이름
+        });
+
+        var goal = new ROSLIB.Goal({
+            actionClient: actionNodeClient,
+            goalMessage: {
+                order: "start",
+            },
+        });
+
+        var nameTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: '/pause',
+            messageType: 'std_msgs/String'
+        });
+
+        var msgTopic = new ROSLIB.Message({
+            data: "stop",
+        });
+
+        goal.on("feedback", function (feedback) {
+            console.log("Feedback: " + feedback.sequence);
+            
+        });
+
+        goal.on("result", function (result) {
+            console.log("Final Result: " + result.sequence);
+            document.getElementById("status_value").innerHTML = "FINISH";
+            
+        });
+
+        function start() {
+            goal.send();
+            console.log("Start");
+        }
+
+        function stop() {
+            nameTopic.publish(msgTopic);
+            console.log("Stop");
+        }
+
+
+    </script>
+</head>
+
+<body>
+    <div id="status">
+        <span id="status_title">STATUS : </span>
+        <span id="status_value"></span>
+    </div>
+
+
+    <div id="btn">
+        <span id="btn_title">ACTION</span>
+        <button id="start" onclick="start()">START</button>
+        <span id="btn_title">TOPIC</span>
+        <button id="stop" onclick="stop()">pause</button>
+    </div>
+
+</body>
+
+</html>
