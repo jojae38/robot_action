@@ -74,13 +74,15 @@ class Pioneer
     ros::Time pause_time;
     //when the resume button is pushed
     ros::Time resume_time;
-    // ros::Time prev_time;
-    // ros::Time current_time;
+    //adjust
+    ros::Time adjust_start_time;
+    ros::Time adjust_end_time;
     //camera pos
     int cam_pixel_x_pos;
     int cam_pixel_y_pos;
     double cam_real_x_pos;
     double cam_real_y_pos;
+    double cam_real_dis;
     double cam_real_th; 
     double robot_adjust_th;
     //
@@ -132,8 +134,8 @@ class Pioneer
 
     void calc_adjust_val();//When Marker is 15% shown do adjust_th first then adjust_x
     void exact_adjust_val();//When Marker is 90% shown do adjust_x first then adjust_th
-    void adjust_th();
-    void adjust_x();
+    void adjust_th(double th);
+    void adjust_x(double x);
     void is_direction_match();
     void is_destination_arrive();
 
@@ -391,8 +393,9 @@ bool Pioneer::run_camera()
 
         cam_real_x_pos/=1754.4;
         cam_real_y_pos/=1754.4;
+        cam_real_dis=sqrt(cam_real_x_pos*cam_real_x_pos+cam_real_y_pos*cam_real_y_pos);
         cam_real_x_pos+=Robot_center_to_camera_center;
-        cam_real_th=tan(cam_real_y_pos/cam_pixel_x_pos);
+        cam_real_th=tan(cam_real_y_pos/cam_real_x_pos);
         cout <<"AD_x: "<<cam_real_x_pos<<endl;
         cout <<"AD_y: "<<cam_real_y_pos<<endl;
         cout <<"AD_TH: "<<cam_real_th<<endl;
@@ -536,29 +539,29 @@ bool Pioneer::run_camera()
     }/*HSV*/
     else
     {
-    for(int i=1;i<frame.rows-1;i++)
-    {
-        for(int j=1;j<frame.cols-1;j++)
+        for(int i=1;i<frame.rows-1;i++)
         {
-            int H=mod_frame.at<cv::Vec3b>(i,j)[0];
-            int S=mod_frame.at<cv::Vec3b>(i,j)[1];
-            int V=mod_frame.at<cv::Vec3b>(i,j)[2];
-            // cout <<"H: "<< H<<endl;
-            // cout <<"S: "<< S<<endl;
-            // cout <<"V: "<< V<<endl;
-                //            if(H<10)
-                // {
-                //     frame.at<cv::Vec3b>(i,j)={0,0,255};
-                // }    
-            if(120>=H&&H>=98&&S>105&&V>125)
+            for(int j=1;j<frame.cols-1;j++)
             {
-                frame.at<cv::Vec3b>(i,j)={0,0,255};
-                // cout <<S<<endl;
-                marker_value++;
-            }    
+                int H=mod_frame.at<cv::Vec3b>(i,j)[0];
+                int S=mod_frame.at<cv::Vec3b>(i,j)[1];
+                int V=mod_frame.at<cv::Vec3b>(i,j)[2];
+                // cout <<"H: "<< H<<endl;
+                // cout <<"S: "<< S<<endl;
+                // cout <<"V: "<< V<<endl;
+                    //            if(H<10)
+                    // {
+                    //     frame.at<cv::Vec3b>(i,j)={0,0,255};
+                    // }    
+                if(120>=H&&H>=98&&S>105&&V>125)
+                {
+                    frame.at<cv::Vec3b>(i,j)={0,0,255};
+                    // cout <<S<<endl;
+                    marker_value++;
+                }    
+            }
         }
-    }
-    MARKER_pixel=marker_value;
+        MARKER_pixel=marker_value;
     // ROS_INFO("Marker_value %d",MARKER_pixel);
     // number++;
     }
@@ -678,17 +681,6 @@ int Pioneer::convert_world_pos_y(double y)
     double world_y=Map.col_block*(double(Map.cross-1)-y);
     return int(world_y);
 }
-// int Pioneer::convert_robot_pos_x(double x)//put in y
-// {
-//     double world_x=Map.row_block*(x+1);
-//     return int(world_x);
-// }
-// int Pioneer::convert_robot_pos_y(double y)//put in x
-// {
-//     double world_y=Map.col_block*(double(Map.cross-1)-y);
-//     return int(world_y);
-// }
-
 void Pioneer::is_direction_match()
 {
     int temp_x=Move_Order[order_num].x-ROBOT.x;
@@ -744,7 +736,6 @@ void Pioneer::run_robot()
         else if(Marker_mode==MARKER_MODE::Complete_Marker)
         {
 
-            
         }
         else if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
@@ -757,6 +748,8 @@ void Pioneer::run_robot()
         {
             // Pioneer::stop();
             ROS_INFO("SEE MARKER");
+            // adjust_th(cam_real_th);
+            // adjust_x(cam_real_dis);
             //calculate middle pos
             //set to marker location
         }
@@ -766,7 +759,7 @@ void Pioneer::run_robot()
             // ROS_INFO("STOP");
         }
     
-        // is_direction_match();
+        is_direction_match();
         // is_destination_arrive();
         // RUN
         if(mode==MODE::Stop)
@@ -818,7 +811,6 @@ bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
     ROBOT.th=tf::getYaw(pose.getRotation());
     return true;
 }
-
 void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
 {
     if(msg->data=='w'||msg->data=='w')
@@ -878,4 +870,15 @@ void Pioneer::odomcallback(const nav_msgs::Odometry::ConstPtr &msg)
     odom_msg=*msg;
     update_ROBOT_Position(msg);
     cout <<ROBOT.th<<endl;
+}
+void Pioneer::adjust_th(double th)
+{
+    // double time_duration=th/angle_speed;
+    // while(adjust_end_time<=adjust_start_time+time_duration)
+    // {
+    // }
+}
+void Pioneer::adjust_x(double x)
+{
+
 }
