@@ -4,12 +4,12 @@ string order
 #0 - INIT 1 - GO 2 - PAUSE 
 ---
 #result definition
-string res_Status
+string sequence
 #[current position]
 #[Used Time]
 ---
 #feedback
-string curr_Status
+string sequence
 
 #[current position]
 #[current order num]

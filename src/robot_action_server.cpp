@@ -38,7 +38,7 @@ class Robot_Action
 			    order=as_.acceptNewGoal()->order;
         if(success)
         {
-        result_.res_Status="Arrive";
+        result_.sequence="Arrive";
         ROS_INFO("SAFELY Arrirved at Destination");
         as_.setSucceeded(result_);
         break;
@@ -48,18 +48,19 @@ class Robot_Action
           if(order=="start")
           {
             ROS_INFO("run");
-            feedback_.curr_Status="aaa";
-            as_.publishFeedback(feedback_);
+            feedback_.sequence="aaa";
+            start_msg.data="start";
             start.publish(start_msg);
-            cout << order <<endl;
+            as_.publishFeedback(feedback_);
             //robot 위치 감지
           }
           else
           {
             ROS_INFO("waiting");
-            feedback_.curr_Status="bbb";
+            feedback_.sequence="bbb";
+            start_msg.data="stop";
+            start.publish(start_msg);
             as_.publishFeedback(feedback_);
-            cout << order <<endl;
           }
         }
          r.sleep();
@@ -70,7 +71,7 @@ class Robot_Action
 int main(int argc, char ** argv)
 {
   ros::init(argc, argv, "robot_action_server");
-  Robot_Action Robot_Action_("robot_action");
+  Robot_Action Robot_Action_("/ojtAction");
   ros::spin();
 
   return 0;

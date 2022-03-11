@@ -3,7 +3,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "robot_action_client");
   int order_num=0;
-  actionlib::SimpleActionClient<robot_action::robot_actionAction> robot_client("robot_action",true);
+  actionlib::SimpleActionClient<robot_action::robot_actionAction> robot_client("/ojtAction",true);
   ROS_INFO("Waiting for Robot_action_server to start.");
   robot_client.waitForServer();
   ROS_INFO("Robot_action_server_ON, sending goal.");
