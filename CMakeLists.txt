@@ -221,9 +221,12 @@ include_directories(
 #   robot_action_server
 #   ${actionlib_tutorials_EXPORTED_TARGETS}
 # )
+add_executable(key_input src/key_input.cpp)
+target_link_libraries(key_input ${catkin_LIBRARIES})
+# add_dependencies(add_two_ints_client beginner_tutorials_gencpp)
+add_dependencies(key_input ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_executable(robot_control src/robot_control.cpp)
-
 target_link_libraries( 
   robot_control
   ${catkin_LIBRARIES}
@@ -233,25 +236,16 @@ add_dependencies(robot_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPO
 
 
 add_executable(robot_action_server src/robot_action_server.cpp)
-
 target_link_libraries( 
   robot_action_server
   ${catkin_LIBRARIES}
 )
 add_dependencies(robot_action_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# add_dependencies(
-#   robot_action_server
-#   ${actionlib_tutorials_EXPORTED_TARGETS}
-# )
+
 
 add_executable(robot_action_client src/robot_action_client.cpp)
-
 target_link_libraries(
   robot_action_client
   ${catkin_LIBRARIES}
 )
 add_dependencies(robot_action_client ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# add_dependencies(
-#   robot_action_client
-#   ${actionlib_tutorials_EXPORTED_TARGETS}
-# )
