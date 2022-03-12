@@ -5,19 +5,19 @@
          <param name="ROBOT_POS" type="string" value="0,0"/>
 		<!-- *3.14 -->
         <!-- MARKER -->
-        <param name="marker_num" type="int" value="1"/>
-        <param name="Marker1" type="string" value="4,-2"/>
-        <param name="Marker2" type="string" value="2,2"/>
-        <param name="Marker3" type="string" value="3,3"/>
-        <param name="Marker4" type="string" value="4,4"/>
-        <param name="Marker5" type="string" value="5,5"/>
-        <param name="Marker6" type="string" value="6,6"/>
-        <param name="Marker7" type="string" value="7,7"/>
-        <param name="Marker8" type="string" value="8,8"/>
-        <param name="Marker9" type="string" value="4,3"/>
-        <param name="Marker10" type="string" value="3,4"/>
+        <param name="marker_num" type="int" value="10"/>
+        <param name="Marker1" type="string" value="1,0"/>
+        <param name="Marker2" type="string" value="2,0"/>
+        <param name="Marker3" type="string" value="3,0"/>
+        <param name="Marker4" type="string" value="4,0"/>
+        <param name="Marker5" type="string" value="4,-1"/>
+        <param name="Marker6" type="string" value="4,-2"/>
+        <param name="Marker7" type="string" value="4,-3"/>
+        <param name="Marker8" type="string" value="4,-5"/>
+        <param name="Marker9" type="string" value="4,-6"/>
+        <param name="Marker10" type="string" value="3,-6"/>
         <!-- ORDER_POS -->
-        <param name="order_num" type="int" value="1"/>
+        <param name="order_num" type="int" value="0"/>
         <param name="Order1" type="string" value="1,-2"/>
         <param name="Order2" type="string" value="2,4"/>
         <param name="Order3" type="string" value="4,7"/>
