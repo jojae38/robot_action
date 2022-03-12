@@ -241,7 +241,7 @@ void Pioneer::Get_param()
     marker_pass=nh_.advertise<std_msgs::Bool>("Marker_pass",1);
     marker_on_sight=nh_.advertise<std_msgs::Bool>("Marker_onsight",1);
 
-    robot_marker_dis_pub=nh_.advertise<geometry_msgs::Pose>("Marker_distance",10);
+    robot_marker_dis_pub=nh_.advertise<geometry_msgs::Twist>("Marker_distance",10);
 
     correction=nh_.subscribe("/chk_goal",1,&Pioneer::correctioncallback,this);
     camera_pos=nh_.subscribe("/kalman_mean",10,&Pioneer::camera_poscallback,this);
@@ -751,10 +751,12 @@ void Pioneer::run_robot()
         else if(Marker_mode==MARKER_MODE::Complete_Marker&&!MARKER_pub_once)//
         {
             std_msgs::Bool temp;
-            geometry_msgs::Pose marker_pose_temp;
-            marker_pose_temp.position.x=cam_real_x_pos;
-            marker_pose_temp.position.y=cam_real_y_pos;
-            marker_pose_temp.position.z=robot_adjust_th;
+		 geometry_msgs::Twist marker_pose_temp;
+            marker_pose_temp.linear.x=cam_real_x_pos;
+            marker_pose_temp.linear.y=cam_real_y_pos;
+            marker_pose_temp.angular.z=robot_adjust_th;
+		
+
             temp.data=true;
             
             marker_pass.publish(temp);
@@ -766,10 +768,10 @@ void Pioneer::run_robot()
         {
             // Pioneer::stop();
             ROS_INFO("SEE MOST MARKER");
-            geometry_msgs::Pose marker_pose_temp;
-            marker_pose_temp.position.x=cam_real_x_pos;
-            marker_pose_temp.position.y=cam_real_y_pos;
-            marker_pose_temp.position.z=robot_adjust_th;
+            geometry_msgs::Twist marker_pose_temp;
+            marker_pose_temp.linear.x=cam_real_x_pos;
+            marker_pose_temp.linear.y=cam_real_y_pos;
+            marker_pose_temp.angular.z=robot_adjust_th;
             robot_marker_dis_pub.publish(marker_pose_temp);
 
             
@@ -780,9 +782,10 @@ void Pioneer::run_robot()
         {
             // Pioneer::stop();
             ROS_INFO("SEE MARKER");
-            geometry_msgs::Pose marker_pose_temp;
-            marker_pose_temp.position.x=cam_real_x_pos;
-            marker_pose_temp.position.y=cam_real_y_pos;
+             geometry_msgs::Twist marker_pose_temp;
+            marker_pose_temp.linear.x=cam_real_x_pos;
+            marker_pose_temp.linear.y=cam_real_y_pos;
+       
             robot_marker_dis_pub.publish(marker_pose_temp);
             // adjust_th(cam_real_th);
             // adjust_x(cam_real_dis);
