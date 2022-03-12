@@ -1,8 +1,8 @@
 <launch>
 	<node name="robot_control_node" pkg="robot_action" type="robot_control" output="screen"> 
 		<param name="speed" type="double" value="0.1"/>
-		<param name="angle_speed" type="double" value="0.2"/>
-         <param name="ROBOT_POS" type="string" value="0,-2"/>
+		<param name="angle_speed" type="double" value="0.04"/>
+         <param name="ROBOT_POS" type="string" value="0,0"/>
 		<!-- *3.14 -->
         <!-- MARKER -->
         <param name="marker_num" type="int" value="1"/>
