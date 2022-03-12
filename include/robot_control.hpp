@@ -400,7 +400,7 @@ void Pioneer::set_cmd_vel(double x,double th)
 }
 bool Pioneer::run_camera()
 {
-     Pioneer::visualize();
+    //  Pioneer::visualize();
     // cv::Mat un_proceed_frame;
     cv::Mat frame;
     // cv::Mat resized_frame;
