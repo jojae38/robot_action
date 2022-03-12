@@ -246,7 +246,7 @@ void Pioneer::Get_param()
     marker_pass=nh_.advertise<std_msgs::Bool>("Marker_pass",1);
     marker_on_sight=nh_.advertise<std_msgs::Bool>("Marker_onsight",1);
 
-    robot_marker_dis_pub=nh_.advertise<geometry_msgs::Pose>("Marker_distance",10);
+    robot_marker_dis_pub=nh_.advertise<geometry_msgs::Twist>("Marker_distance",10);
 
     correction=nh_.subscribe("/chk_goal",1,&Pioneer::correctioncallback,this);
     camera_pos=nh_.subscribe("/kalman_mean",10,&Pioneer::camera_poscallback,this);
