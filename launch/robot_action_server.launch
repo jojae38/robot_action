@@ -5,7 +5,7 @@
          <param name="ROBOT_POS" type="string" value="0,0"/>
 		<!-- *3.14 -->
         <!-- MARKER -->
-        <param name="marker_num" type="int" value="3"/>
+        <param name="marker_num" type="int" value="5"/>
         <param name="Marker1" type="string" value="1,0"/>
         <param name="Marker2" type="string" value="2,0"/>
         <param name="Marker3" type="string" value="2,-1"/>

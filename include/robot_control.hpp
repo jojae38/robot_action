@@ -122,6 +122,7 @@ class Pioneer
     nav_msgs::Odometry odom_msg;
 
     int count;
+    int test_count;
     int PATH_index;
     int Marker_index;
     int marker_num;
@@ -197,7 +198,7 @@ Pioneer::Pioneer()
     pause_stat=false;
     start_stat=false;
     prev_mode=MODE::Stop;
-
+    test_count=0;
     cv::VideoCapture cap(0);
     if(!cap.isOpened())
 		std::cerr<<"Camera open failed!"<<std::endl;
@@ -736,6 +737,7 @@ int Pioneer::convert_world_pos_y(double y)
 }
 void Pioneer::is_direction_match()
 {
+    /*atan version*/
     double temp_x=MARKER[Marker_index].x-ROBOT.x;
     double temp_y=MARKER[Marker_index].y-ROBOT.y;
     // cout <<Marker_index<<endl;
@@ -747,22 +749,30 @@ void Pioneer::is_direction_match()
     // double temp_th_2=ROBOT.th-acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)));
     // cout <<"temp_x: "<<temp_x<<endl;
     // cout <<"temp_y: "<<temp_y<<endl;
-    if(temp_x<0.1)
-    {
-        if(temp_y<0)
-        {
-            temp_th=PI/2;
-        }
-        else
-        {
-            temp_th=-PI/2;
-        }
-    }
+    
+    // if(temp_x<0.1)
+    // {
+    //     if(temp_y<0)
+    //     {
+    //         temp_th=PI/2;
+    //     }
+    //     else
+    //     {
+    //         temp_th=-PI/2;
+    //     }
+    // }
+    
+    // cout<<temp_th<<endl;
     temp_th+=ROBOT.th;
+    test_count++;
+        if(test_count==10)
+        {
+            cout<<temp_th<<endl;
+            test_count=0;
+        }
+    // cout <<temp_th<<endl;
     
-    cout <<temp_th<<endl;
-    
-    if(ROBOT.th<(temp_th+0.1)&&ROBOT.th>(temp_th-0.1))
+    if(abs(temp_th)<0.15)
     {
         // ROS_INFO("Direction Matched");
         mode=MODE::Front;
@@ -780,6 +790,17 @@ void Pioneer::is_direction_match()
             mode=MODE::Right;
         }
     }
+
+    // double Rob_cos=cos(ROBOT.th);
+    // double Rob_sin=sin(ROBOT.th);
+    
+    // double th=PI/2-acos(temp_x/sqrt(temp_x*temp_x+temp_y+temp_y));
+    // double Mar_cos=cos(th);
+    // double Mar_sin=sin(th);
+    
+    // double determine=Rob_cos*Mar_cos+Rob_sin*Mar_sin;
+    // cout <<th<<endl;
+    // cout << determine<<endl;
 }
 void Pioneer::is_destination_arrive()
 {
@@ -800,7 +821,6 @@ void Pioneer::run_robot()
     ros::Rate rate(10);
     while(ros::ok())
     {
-        
         geometry_msgs::Twist marker_pose_temp;
         std_msgs::Bool TRUE_msgs;
         std_msgs::Bool FALSE_msgs;
@@ -809,8 +829,9 @@ void Pioneer::run_robot()
         count++;
         if(count==10)
         {
-            PATH_index%=100;
             count=0;
+            PATH_index%=100;
+            
             if(PATH.size()<100)
             PATH.push_back(ROBOT);
             else
@@ -921,7 +942,7 @@ void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
         mode=MODE::Front;
         ROS_INFO("CHANGE_MODE -> FRONT");
         //testing purpose
-        add_Position(ROBOT,0.1*cos(ROBOT.th),+0.1*sin(ROBOT.th),0);
+        add_Position(ROBOT,0.02*cos(ROBOT.th),+0.02*sin(ROBOT.th),0);
     }
     else if(msg->data=='S'||msg->data=='s')
     {
@@ -933,14 +954,14 @@ void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
     {
         mode=MODE::Right;
         ROS_INFO("CHANGE_MODE -> RIGHT");
-        add_Position(ROBOT,0,0,-0.1);
+        add_Position(ROBOT,0,0,-0.05);
         //testing purpose
     }
     else if(msg->data=='A'||msg->data=='a')
     {
         mode=MODE::Left;
         ROS_INFO("CHANGE_MODE -> LEFT");
-        add_Position(ROBOT,0,0,0.1);
+        add_Position(ROBOT,0,0,0.05);
         //testing purpose
     }
     else if(msg->data=='X'||msg->data=='x')
@@ -1078,7 +1099,7 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
 }
 void Pioneer::is_marker_match()
 {
-    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.1&&abs(MARKER[Marker_index].y)<0.1)
+    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.2&&abs(MARKER[Marker_index].y)<0.2)
     {
         if(Marker_index==marker_num)
         {
