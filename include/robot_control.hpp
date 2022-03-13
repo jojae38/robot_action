@@ -742,7 +742,7 @@ void Pioneer::is_direction_match()
     // cout <<"x: "<<MARKER[0].x<<endl;
     // cout <<"y: "<<MARKER[0].y<<endl;
     
-    double temp_th=atan(temp_y/(-temp_x));
+    double temp_th=atan(temp_y/(temp_x));
     // double temp_th_1=acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)))-ROBOT.th;
     // double temp_th_2=ROBOT.th-acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)));
     // cout <<"temp_x: "<<temp_x<<endl;
@@ -758,7 +758,7 @@ void Pioneer::is_direction_match()
             temp_th=-PI/2;
         }
     }
-    temp_th-=ROBOT.th;
+    temp_th+=ROBOT.th;
     
     cout <<temp_th<<endl;
     
