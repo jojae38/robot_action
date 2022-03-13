@@ -1,16 +1,16 @@
 <launch>
 	<node name="robot_control_node" pkg="robot_action" type="robot_control" output="screen"> 
-		<param name="speed" type="double" value="0.1"/>
+		<param name="speed" type="double" value="0.05"/>
 		<param name="angle_speed" type="double" value="0.04"/>
          <param name="ROBOT_POS" type="string" value="0,0"/>
 		<!-- *3.14 -->
         <!-- MARKER -->
-        <param name="marker_num" type="int" value="5"/>
+        <param name="marker_num" type="int" value="3"/>
         <param name="Marker1" type="string" value="1,0"/>
         <param name="Marker2" type="string" value="2,0"/>
-        <param name="Marker3" type="string" value="3,0"/>
-        <param name="Marker4" type="string" value="4,0"/>
-        <param name="Marker5" type="string" value="4,-1"/>
+        <param name="Marker3" type="string" value="2,-1"/>
+        <param name="Marker4" type="string" value="2,-2"/>
+        <param name="Marker5" type="string" value="3,-2"/>
         <param name="Marker6" type="string" value="4,-2"/>
         <param name="Marker7" type="string" value="4,-3"/>
         <param name="Marker8" type="string" value="4,-5"/>

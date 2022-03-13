@@ -604,9 +604,7 @@ bool Pioneer::run_camera()
     // cv::imshow("un_proceed_frame",un_proceed_frame);
     /*HSV*/
     // cout << marker_value<<endl;
-   
-    if(cv::waitKey(10)==27)
-        return 0;
+        
     return true;
 }
 void Pioneer::set_color(struct COLOR &color,int R,int G,int B,int offset)
@@ -764,14 +762,14 @@ void Pioneer::is_direction_match()
     
     cout <<temp_th<<endl;
     
-    if(ROBOT.th<temp_th+0.1&&ROBOT.th>temp_th-0.1)
+    if(ROBOT.th<(temp_th+0.1)&&ROBOT.th>(temp_th-0.1))
     {
         // ROS_INFO("Direction Matched");
         mode=MODE::Front;
     }
     else
     {
-        if(temp_th>0)
+        if(temp_th<0)
         {
             ROS_INFO("turn left");
             mode=MODE::Left;
@@ -827,8 +825,9 @@ void Pioneer::run_robot()
             mode_change=true;
             prev_mode=mode;
         }
-        // run_camera();
+        run_camera();
         visualize();
+        cv::waitKey(10)==27;
         is_marker_on_sight();
         
         marker_pass.publish(FALSE_msgs);
@@ -1079,10 +1078,11 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
 }
 void Pioneer::is_marker_match()
 {
-    if(MARKER[Marker_index].x-ROBOT.x<0.05&&MARKER[Marker_index].y<0.05)
+    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.1&&abs(MARKER[Marker_index].y)<0.1)
     {
         if(Marker_index==marker_num)
         {
+            ROS_INFO("arrive %d",Marker_index);
             Arrive=true;
             mode=MODE::Stop;
         }
