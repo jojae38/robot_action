@@ -763,16 +763,24 @@ void Pioneer::is_direction_match()
     // }
     
     // cout<<temp_th<<endl;
-    temp_th+=ROBOT.th;
+    // if(temp_x<0)
+    // {
+           
+    // }
+    // else
+    // {
+            
+    // }
+    temp_th=-temp_th+ROBOT.th;
     test_count++;
         if(test_count==10)
         {
             cout<<temp_th<<endl;
             test_count=0;
         }
-    // cout <<temp_th<<endl;
+    cout <<temp_th<<endl;
     
-    if(abs(temp_th)<0.15)
+    if(abs(temp_th)<0.1)
     {
         // ROS_INFO("Direction Matched");
         mode=MODE::Front;
