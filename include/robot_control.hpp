@@ -4,6 +4,7 @@
 #include <vector>
 #include <math.h>
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Pose.h"
 #include "std_msgs/Char.h"
 #include <time.h>
 #include <opencv2/opencv.hpp>
@@ -24,7 +25,7 @@ using namespace std;
                         -8.2735393054366954e-04, -6.8036803338709421e-05,
                         -2.0917602681902503e-01); // Assuming no lens distortion
 
-
+const double Marker_Gap=0.6;//meter
 const double camera_width = 0.45;//meter
 const double camera_length = 0.34;//meter
 const double Robot_wheel_r = 0.11;//meter
@@ -35,23 +36,24 @@ int MARKER_FULL_num= 30000;
 //ROBOT
 ros::Publisher cmd_vel_pub;
 ros::Subscriber key_input;
-
+ros::Subscriber odom_status;//for testing
 
 //SH_LEE
 ros::Publisher robot_marker_dis_pub;//linear x value + linear y value angular z value(this option can be sent when most marker is shown)
-ros::Publisher marker_pass;
 ros::Publisher marker_on_sight;
+ros::Publisher marker_center;
+
+ros::Publisher marker_pass;//move robot linear 42cm if we have to rotate send true once
+ros::Publisher pos_spin_prev;//send true before spin
+ros::Publisher pos_spin_after;//send true after spin
 
 ros::Subscriber correction; //type std_msgs bool
 ros::Subscriber camera_pos;
 ros::Subscriber robot_pos;
 
-
-
-
 //SERVER
 ros::Subscriber stop_status;
-ros::Subscriber odom_status;
+
 ros::Subscriber start_status;
 ros::Publisher robot_result;
 ros::Publisher robot_feedback;
@@ -154,14 +156,16 @@ class Pioneer
     void back();
     void run_robot();
     bool update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg);
-    void add_path_or_marker(vector<POSITION> &Pos, int x,int y,int order_num);
+    void add_path_or_marker(vector<POSITION> &Pos, double x,double y,int order_num);
 
     void calc_adjust_val();//When Marker is 15% shown do adjust_th first then adjust_x
     void exact_adjust_val();//When Marker is 90% shown do adjust_x first then adjust_th
     void adjust_th(double th);
     void adjust_x(double x);
     void is_direction_match();
+    void is_marker_match();
     void is_destination_arrive();
+    void pub_geometry_twist_val(geometry_msgs::Twist& val);
 
     void keycallback(const std_msgs::Char::ConstPtr &msg);
     void pausecallback(const std_msgs::String::ConstPtr &msg);
@@ -185,8 +189,6 @@ class Pioneer
     void draw_path_at(double x,double y,cv::Mat &map,struct COLOR color);
     int convert_world_pos_x(double x);
     int convert_world_pos_y(double y);
-    // int convert_robot_pos_x(double x);
-    // int convert_robot_pos_y(double y);
 };
   
 Pioneer::Pioneer()
@@ -243,8 +245,12 @@ void Pioneer::Get_param()
     robot_result=nh_.advertise<std_msgs::String>("",1);
     robot_feedback=nh_.advertise<std_msgs::String>("",10);
     //SH_LEE
-    marker_pass=nh_.advertise<std_msgs::Bool>("Marker_pass",1);
     marker_on_sight=nh_.advertise<std_msgs::Bool>("Marker_onsight",1);
+    marker_center=nh_.advertise<std_msgs::Bool>("Marker_center",1);
+    marker_pass=nh_.advertise<std_msgs::Bool>("Marker_pass",1);
+    
+    pos_spin_prev=nh_.advertise<std_msgs::Bool>("pos_spin_prev",1);
+    pos_spin_after=nh_.advertise<std_msgs::Bool>("pos_spin_after",1);
 
     robot_marker_dis_pub=nh_.advertise<geometry_msgs::Twist>("Marker_distance",10);
 
@@ -285,10 +291,10 @@ void Pioneer::Get_param()
         marker=marker+to_string(i);
         nh_private.param<string>(marker, marker_pos,"10,10");
         index=marker_pos.find(',');
-        x=atoi(marker_pos.substr(index+1).c_str());
+        y=atoi(marker_pos.substr(index+1).c_str());
         marker_pos.erase(index,marker_pos.size()-1);
-        y=atoi(marker_pos.c_str());
-        add_path_or_marker(MARKER,x,y,i);
+        x=atoi(marker_pos.c_str());
+        add_path_or_marker(MARKER,Marker_Gap*x,Marker_Gap*y,i);
         
     }
     ROS_INFO("%d MARKER SET",marker_num);
@@ -300,10 +306,10 @@ void Pioneer::Get_param()
         order=order+to_string(i);
         nh_private.param<string>(order,order_pos,"10,10");
         index=order_pos.find(',');
-        x=atoi(order_pos.substr(index+1).c_str());
+        y=atoi(order_pos.substr(index+1).c_str());
         order_pos.erase(index,order_pos.size()-1);
-        y=atoi(order_pos.c_str());
-        add_path_or_marker(Move_Order,x,y,i);
+        x=atoi(order_pos.c_str());
+        add_path_or_marker(Move_Order,Marker_Gap*x,Marker_Gap*y,i);
     }
     ROS_INFO("%d ORDER_SET",order_num);
 }
@@ -340,7 +346,7 @@ void Pioneer::back()
 {
     set_cmd_vel(-speed,0);
 }
-void Pioneer::add_path_or_marker(vector<POSITION> &Pos, int x,int y,int order_num)
+void Pioneer::add_path_or_marker(vector<POSITION> &Pos, double x,double y,int order_num)
 {
     POSITION temp;
     set_Position(temp,x,y,0);
@@ -634,49 +640,65 @@ void Pioneer::visualize()
             map.at<cv::Vec3b>(k,i*Map.col_block)={255,255,255};
         }
     }
-    // Print Marker(whick is found)
-    for(int i=0;i<Pioneer::MARKER.size();i++)
-    {
-        Pioneer::draw_marker_at(convert_world_pos_y(Pioneer::MARKER[i].y),convert_world_pos_x(-Pioneer::MARKER[i].x),map,MARKER_COLOR);
-    }
-    // //Print Order Seq
-    for(int i=0;i<Pioneer::Move_Order.size();i++)
-    {
-        Pioneer::draw_marker_at(convert_world_pos_y(Pioneer::Move_Order[i].y),convert_world_pos_x(-Pioneer::Move_Order[i].x),map,ORDER_COLOR);
-    }
     for(int i=0;i<Pioneer::PATH.size();i++)
     {
         Pioneer::draw_path_at(convert_world_pos_y(PATH[i].x),convert_world_pos_x(-PATH[i].y),map,PATH_COLOR);
     }
+    // Print Marker(whick is found)
+    for(int i=0;i<Pioneer::MARKER.size();i++)
+    {
+        Pioneer::draw_marker_at(convert_world_pos_x(-Pioneer::MARKER[i].y),convert_world_pos_y(Pioneer::MARKER[i].x),map,MARKER_COLOR);
+    }
+    // //Print Order Seq
+    for(int i=0;i<Pioneer::Move_Order.size();i++)
+    {
+        Pioneer::draw_marker_at(convert_world_pos_x(-Pioneer::Move_Order[i].y),convert_world_pos_y(Pioneer::Move_Order[i].x),map,ORDER_COLOR);
+    }
+    
     // //Print Robot
     Pioneer::draw_robot_at(convert_world_pos_y(ROBOT.x),convert_world_pos_x(-ROBOT.y),ROBOT.th,&map);
     cv::namedWindow("map");
     cv::moveWindow("map",865,0);
     cv::imshow("map",map);
-    // cv::waitKey(10)==27;
+    cv::waitKey(10)==27;
 }
 void Pioneer::draw_robot_at(double x,double y,double th,cv::Mat *map)
 {
-    double cos_th=sin(ROBOT.th);
-    double sin_th=cos(ROBOT.th);
+    double cos_th=cos(ROBOT.th);
+    double sin_th=sin(ROBOT.th);
     
-    for(int i=4;i<30;i++)
+    for(int i=-30;i<-4;i++)
     {
         for(int j=-3;j<=3;j++)
         {
             int row=int(i*cos_th+j*sin_th+x);
             int col=int(i*sin_th-j*cos_th+y);
             if(row<0)
-            {row=0;}
+                row=0;
             if(row>map->rows)
+                row=map->rows-1;
+            if(col<0)
+                col=0;
+            if(col>map->cols)
+                col=map->cols-1;
             map->at<cv::Vec3b>(row,col)={ROBOT_COLOR_X.B,ROBOT_COLOR_X.G,ROBOT_COLOR_X.R};
         }
     }
-    for(int i=4;i<30;i++)
+    for(int i=-30;i<4;i++)
     {
         for(int j=-3;j<=3;j++)
-        {
-            map->at<cv::Vec3b>(int(-i*sin_th-j*cos_th+x),int(i*cos_th-j*sin_th+y))={ROBOT_COLOR_Y.B,ROBOT_COLOR_Y.G,ROBOT_COLOR_Y.R};    
+        {   
+            int row=int(-i*sin_th-j*cos_th+x);
+            int col=int(i*cos_th-j*sin_th+y);
+            if(row<0)
+                row=0;
+            if(row>map->rows)
+                row=map->rows-1;
+            if(col<0)
+                col=0;
+            if(col>map->cols)
+                col=map->cols-1;
+            map->at<cv::Vec3b>(row,col)={ROBOT_COLOR_Y.B,ROBOT_COLOR_Y.G,ROBOT_COLOR_Y.R};    
         }
     }
 }
@@ -685,8 +707,8 @@ void Pioneer::draw_marker_at(double x,double y,cv::Mat &map,struct COLOR color)
     for(int i=-5;i<=5;i++)
     {
         for(int j=-5;j<=5;j++)
-        {
-            map.at<cv::Vec3b>(i+x,j+y)={color.B,color.G,color.R};
+        {   
+        map.at<cv::Vec3b>(i+y,j+x)={color.B,color.G,color.R};
         }
     }
 }
@@ -696,28 +718,51 @@ void Pioneer::draw_path_at(double x,double y,cv::Mat &map,struct COLOR color)
     {
         for(int j=-1;j<=1;j++)
         {
-            map.at<cv::Vec3b>(i+x,j+y)={color.B,color.G,color.R};
+            
+            int row=int(i+x);
+            int col=int(j+y);
+            // if(row>0&&row<map.rows-1&&col>0&&col<map.cols-1)
+                map.at<cv::Vec3b>(row,col)={color.B,color.G,color.R};
         }
     }
 }
 int Pioneer::convert_world_pos_x(double x)
 {
-    double world_x=Map.row_block*(x+1);
+    double world_x=Map.row_block*(x*(1.0/Marker_Gap)+1);
     return int(world_x);
 }
 int Pioneer::convert_world_pos_y(double y)
 {
-    double world_y=Map.col_block*(double(Map.cross-1)-y);
+    double world_y=Map.col_block*(double(Map.cross-1)-y*(1.0/Marker_Gap));
     return int(world_y);
 }
 void Pioneer::is_direction_match()
 {
     double temp_x=MARKER[Marker_index].x-ROBOT.x;
     double temp_y=MARKER[Marker_index].y-ROBOT.y;
-    double temp_th=acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)));
-    cout <<"temp_x: "<<temp_x<<endl;
-    cout <<"temp_y: "<<temp_y<<endl;
-    cout <<"temp_th: "<<temp_th<<endl;
+    // cout <<Marker_index<<endl;
+    // cout <<"x: "<<MARKER[0].x<<endl;
+    // cout <<"y: "<<MARKER[0].y<<endl;
+    
+    double temp_th=atan(temp_y/(-temp_x));
+    // double temp_th_1=acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)))-ROBOT.th;
+    // double temp_th_2=ROBOT.th-acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)));
+    // cout <<"temp_x: "<<temp_x<<endl;
+    // cout <<"temp_y: "<<temp_y<<endl;
+    if(temp_x<0.1)
+    {
+        if(temp_y<0)
+        {
+            temp_th=PI/2;
+        }
+        else
+        {
+            temp_th=-PI/2;
+        }
+    }
+    temp_th-=ROBOT.th;
+    
+    cout <<temp_th<<endl;
     
     if(ROBOT.th<temp_th+0.1&&ROBOT.th>temp_th-0.1)
     {
@@ -726,10 +771,16 @@ void Pioneer::is_direction_match()
     }
     else
     {
-        if(ROBOT.th<temp_th)
+        if(temp_th>0)
+        {
+            ROS_INFO("turn left");
             mode=MODE::Left;
+        }
         else
+        {
+            ROS_INFO("turn right");
             mode=MODE::Right;
+        }
     }
 }
 void Pioneer::is_destination_arrive()
@@ -751,6 +802,12 @@ void Pioneer::run_robot()
     ros::Rate rate(10);
     while(ros::ok())
     {
+        
+        geometry_msgs::Twist marker_pose_temp;
+        std_msgs::Bool TRUE_msgs;
+        std_msgs::Bool FALSE_msgs;
+        FALSE_msgs.data=false;
+        TRUE_msgs.data=true;
         count++;
         if(count==10)
         {
@@ -770,80 +827,46 @@ void Pioneer::run_robot()
             mode_change=true;
             prev_mode=mode;
         }
-        run_camera();
-        // visualize();
+        // run_camera();
+        visualize();
         is_marker_on_sight();
-        std_msgs::Bool temp;
-        temp.data=false;
-        marker_pass.publish(temp);
+        
+        marker_pass.publish(FALSE_msgs);
         // Marker
         if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
-            temp.data=true;
+            marker_on_sight.publish(TRUE_msgs);
         }
         else
         {
-            temp.data=false;
+            marker_on_sight.publish(FALSE_msgs);
         }
-        marker_on_sight.publish(temp);
+        
         if(Marker_mode==MARKER_MODE::Position_adjust)
-        {
-            std_msgs::Bool temp;
-            temp.data=true;
-            marker_pass.publish(temp);
-            //if Position adjust is over go to NO MARKER
+        { 
         }
         else if(Marker_mode==MARKER_MODE::Complete_Marker&&!MARKER_pub_once)//
         {
-            std_msgs::Bool temp;
-            geometry_msgs::Twist marker_pose_temp;
-            marker_pose_temp.linear.x=cam_real_x_pos;
-            marker_pose_temp.linear.y=cam_real_y_pos;
-            marker_pose_temp.angular.z=robot_adjust_th;
-
-            temp.data=true;
-            
-            marker_pass.publish(temp);
-            robot_marker_dis_pub.publish(marker_pose_temp);
-
+            pub_geometry_twist_val(marker_pose_temp);
+            marker_center.publish(TRUE_msgs);
             MARKER_pub_once=true;
         }
         else if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
-            // Pioneer::stop();
+            pub_geometry_twist_val(marker_pose_temp);
             ROS_INFO("SEE MOST MARKER");
-            geometry_msgs::Twist marker_pose_temp;
-            marker_pose_temp.linear.x=cam_real_x_pos;
-            marker_pose_temp.linear.y=cam_real_y_pos;
-            marker_pose_temp.angular.z=robot_adjust_th;
-            robot_marker_dis_pub.publish(marker_pose_temp);
-
-            //calculate middle pos
-            //set to marker location
         }
         else if(Marker_mode==MARKER_MODE::Find_Marker)
         {
-            // Pioneer::stop();
+            pub_geometry_twist_val(marker_pose_temp);
             ROS_INFO("SEE MARKER");
-            geometry_msgs::Twist marker_pose_temp;
-            marker_pose_temp.linear.x=cam_real_x_pos;
-            marker_pose_temp.linear.y=cam_real_y_pos;
-            robot_marker_dis_pub.publish(marker_pose_temp);
-            // adjust_th(cam_real_th);
-            // adjust_x(cam_real_dis);
-            //calculate middle pos
-            //set to marker location
         }
         else if(Marker_mode==MARKER_MODE::No_Marker)
         {
-            // Pioneer::stop();
-            // ROS_INFO("STOP");
+    
         }
-        // if(!Arrive)
-        //     adjust_th(-PI/2.0);
-        //     // adjust_x(0.2);
-        // Arrive=true;
-        // is_direction_match();
+        is_direction_match();
+        is_marker_match();
         // is_destination_arrive();
         // RUN
        
@@ -854,17 +877,14 @@ void Pioneer::run_robot()
         else if(mode==MODE::Front)
         {
             Pioneer::go_front();
-
         }
         else if(mode==MODE::Left)
         {
             Pioneer::turn_left();
-
         }
         else if(mode==MODE::Right)
         {
             Pioneer::turn_right();
-
         }
         else if(mode==MODE::Back)
         {
@@ -889,7 +909,6 @@ bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
     ROBOT.x=msg->pose.pose.position.x;
     ROBOT.y=msg->pose.pose.position.y;
 
-
     tf::Pose pose;
     tf::poseMsgToTF(msg->pose.pose,pose);
     //Turn Quaternion to Euler
@@ -903,7 +922,7 @@ void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
         mode=MODE::Front;
         ROS_INFO("CHANGE_MODE -> FRONT");
         //testing purpose
-        // add_Position(ROBOT,0.1*cos(ROBOT.th),-0.1*sin(ROBOT.th),0);
+        add_Position(ROBOT,0.1*cos(ROBOT.th),+0.1*sin(ROBOT.th),0);
     }
     else if(msg->data=='S'||msg->data=='s')
     {
@@ -915,21 +934,21 @@ void Pioneer::keycallback(const std_msgs::Char::ConstPtr &msg)
     {
         mode=MODE::Right;
         ROS_INFO("CHANGE_MODE -> RIGHT");
-        // add_Position(ROBOT,0,0,0.1);
+        add_Position(ROBOT,0,0,-0.1);
         //testing purpose
     }
     else if(msg->data=='A'||msg->data=='a')
     {
         mode=MODE::Left;
         ROS_INFO("CHANGE_MODE -> LEFT");
-        // add_Position(ROBOT,0,0,-0.1);
+        add_Position(ROBOT,0,0,0.1);
         //testing purpose
     }
     else if(msg->data=='X'||msg->data=='x')
     {
         mode=MODE::Back;
         ROS_INFO("CHANGE_MODE -> BACK");
-        // add_Position(ROBOT,0.1*cos(ROBOT.th),-0.1*sin(ROBOT.th),0);
+        add_Position(ROBOT,-0.1*cos(ROBOT.th),-0.1*sin(ROBOT.th),0);
         //testing purpose
     }
     ROS_INFO("GET KEY %c",msg->data);
@@ -1050,4 +1069,27 @@ bool Pioneer::determine_color(cv::Mat& frame,int B,int G,int R,int col,int row)
         return true;
     else 
         return false;
+}
+void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
+{
+    val.linear.x=cam_real_x_pos;
+    val.linear.y=cam_real_y_pos;
+    if(Marker_mode>MARKER_MODE::Find_Marker)
+    val.angular.z=robot_adjust_th;
+}
+void Pioneer::is_marker_match()
+{
+    if(MARKER[Marker_index].x-ROBOT.x<0.05&&MARKER[Marker_index].y<0.05)
+    {
+        if(Marker_index==marker_num)
+        {
+            Arrive=true;
+            mode=MODE::Stop;
+        }
+        else
+        {
+            ROS_INFO("Passed MARKER %d Heading to MARKER %d",Marker_index,Marker_index+1);
+            Marker_index++;
+        }
+    }
 }
