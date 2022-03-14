@@ -108,7 +108,9 @@ class Pioneer
     int prev_Marker_mode;
     int Marker_mode;
     int MARKER_pixel;
-    bool MARKER_pub_once;
+    bool Find_Marker_once;
+    bool Goto_Marker_once;
+    bool Complete_Marker_once;
     bool Arrive;
     struct COLOR MARKER_COLOR;
     struct COLOR ROBOT_COLOR_X;
@@ -163,8 +165,8 @@ class Pioneer
     void exact_adjust_val();//When Marker is 90% shown do adjust_x first then adjust_th
     void adjust_th(double th);
     void adjust_x(double x);
-    void is_direction_match();
-    void is_marker_match();
+    double is_direction_match();
+    bool is_marker_match();
     void is_destination_arrive();
     void pub_geometry_twist_val(geometry_msgs::Twist& val);
 
@@ -220,7 +222,9 @@ Pioneer::Pioneer()
     set_Visual_map(14,700,700);
     order_num=0;
     Marker_index=0;
-    MARKER_pub_once=false;
+    Find_Marker_once=false;
+    Goto_Marker_once=false;
+    Complete_Marker_once=false;
     Arrive=false;
     set_Position(receive_robot_pos,0,0,0);
     set_Position(receive_camera_pos,0,0,0);
@@ -361,7 +365,9 @@ void Pioneer::is_marker_on_sight()//90% of marker is shown
         if(MARKER_pixel<MARKER_FULL_num*0.1)
         {
             Marker_mode=MARKER_MODE::No_Marker;
-            MARKER_pub_once=false;   
+            Complete_Marker_once=false;   
+            Find_Marker_once=false;
+            Goto_Marker_once=false;
         }
     }
     else
@@ -683,7 +689,7 @@ void Pioneer::draw_robot_at(double x,double y,double th,cv::Mat *map)
             map->at<cv::Vec3b>(row,col)={ROBOT_COLOR_X.B,ROBOT_COLOR_X.G,ROBOT_COLOR_X.R};
         }
     }
-    for(int i=-30;i<4;i++)
+    for(int i=-30;i<-4;i++)
     {
         for(int j=-3;j<=3;j++)
         {   
@@ -735,7 +741,7 @@ int Pioneer::convert_world_pos_y(double y)
     double world_y=Map.col_block*(double(Map.cross-1)-y*(1.0/Marker_Gap));
     return int(world_y);
 }
-void Pioneer::is_direction_match()
+double Pioneer::is_direction_match()
 {
     /*atan version*/
     double temp_x=MARKER[Marker_index].x-ROBOT.x;
@@ -771,6 +777,7 @@ void Pioneer::is_direction_match()
     //         temp_th=temp_th+ROBOT.th;
     //     }
     // }
+    
     temp_th=-temp_th+ROBOT.th;
     if(abs(temp_th)>=3.14)
     {
@@ -842,6 +849,7 @@ void Pioneer::is_direction_match()
     // double determine=Rob_cos*Mar_cos+Rob_sin*Mar_sin;
     // cout <<th<<endl;
     // cout << determine<<endl;
+    return temp_th;
 }
 void Pioneer::is_destination_arrive()
 {
@@ -906,28 +914,51 @@ void Pioneer::run_robot()
         if(Marker_mode==MARKER_MODE::Position_adjust)
         { 
         }
-        else if(Marker_mode==MARKER_MODE::Complete_Marker&&!MARKER_pub_once)//
+        else if(Marker_mode==MARKER_MODE::Complete_Marker)//
         {
-            pub_geometry_twist_val(marker_pose_temp);
-            marker_center.publish(TRUE_msgs);
-            MARKER_pub_once=true;
+            if(Complete_Marker_once==false)
+            {
+                pub_geometry_twist_val(marker_pose_temp);
+                marker_center.publish(TRUE_msgs);
+                // is_marker_match();
+                adjust_x(0.42);
+                is_marker_match();
+                if(abs(is_direction_match())>0.3)
+                {
+                    marker_pass.publish(TRUE_msgs);
+                    pos_spin_prev.publish(TRUE_msgs);
+                }
+                Complete_Marker_once=true;
+            }
         }
         else if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
+            if(Goto_Marker_once==false)
+            {}
+            Goto_Marker_once=true;
+            mode=MODE::Front;
             pub_geometry_twist_val(marker_pose_temp);
             ROS_INFO("SEE MOST MARKER");
         }
         else if(Marker_mode==MARKER_MODE::Find_Marker)
         {
+            if(Find_Marker_once==false)
+            {adjust_th(cam_real_th);}
+            Find_Marker_once=true;
+            mode=MODE::Front;
             pub_geometry_twist_val(marker_pose_temp);
             ROS_INFO("SEE MARKER");
         }
         else if(Marker_mode==MARKER_MODE::No_Marker)
         {
-    
+            // is_direction_match();
         }
+        //if you want to move this by pose
+        /*
         is_direction_match();
         is_marker_match();
+        */
+
         // is_destination_arrive();
         // RUN
        
@@ -950,6 +981,11 @@ void Pioneer::run_robot()
         else if(mode==MODE::Back)
         {
             Pioneer::back();
+        }
+        if (Arrive==true)
+        {
+            mode=MODE::Stop;
+            Pioneer::stop();
         }
         // if(!start_stat||pause_stat||Arrive)
         // {
@@ -1138,7 +1174,7 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
     if(Marker_mode>MARKER_MODE::Find_Marker)
     val.angular.z=robot_adjust_th;
 }
-void Pioneer::is_marker_match()
+bool Pioneer::is_marker_match()
 {
     if(abs(MARKER[Marker_index].x-ROBOT.x)<0.2&&abs(MARKER[Marker_index].y-ROBOT.y)<0.2)
     {
@@ -1153,5 +1189,7 @@ void Pioneer::is_marker_match()
             ROS_INFO("Passed MARKER %d Heading to MARKER %d",Marker_index,Marker_index+1);
             Marker_index++;
         }
+        return true;
     }
+    return false;
 }
