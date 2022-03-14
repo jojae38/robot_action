@@ -744,12 +744,45 @@ void Pioneer::is_direction_match()
     // cout <<"x: "<<MARKER[0].x<<endl;
     // cout <<"y: "<<MARKER[0].y<<endl;
     
-    double temp_th=atan(temp_y/(temp_x));
+    double temp_th=atan2(temp_y,temp_x);
     // double temp_th_1=acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)))-ROBOT.th;
     // double temp_th_2=ROBOT.th-acos(temp_x/sqrt((temp_x*temp_x+temp_y*temp_y)));
     // cout <<"temp_x: "<<temp_x<<endl;
     // cout <<"temp_y: "<<temp_y<<endl;
-    
+    // if(temp_x>0)
+    // {
+    //     if(temp_y>0)
+    //     {
+    //         temp_th=-temp_th+ROBOT.th;
+    //     }
+    //     else
+    //     {
+            
+    //     }
+    // }
+    // else
+    // {
+    //     if(temp_y>0)
+    //     {
+    //         temp_th=temp_th+ROBOT.th;
+    //     }
+    //     else
+    //     {
+    //         temp_th=temp_th+ROBOT.th;
+    //     }
+    // }
+    temp_th=-temp_th+ROBOT.th;
+    if(abs(temp_th)>=3.14)
+    {
+        if(temp_th>0)
+        {
+            temp_th-3.14;
+        }
+        else
+        {
+            temp_th+3.14;
+        }
+    }
     // if(temp_x<0.1)
     // {
     //     if(temp_y<0)
@@ -771,7 +804,7 @@ void Pioneer::is_direction_match()
     // {
             
     // }
-    temp_th=-temp_th+ROBOT.th;
+    
     test_count++;
         if(test_count==10)
         {
@@ -1107,7 +1140,7 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
 }
 void Pioneer::is_marker_match()
 {
-    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.2&&abs(MARKER[Marker_index].y)<0.2)
+    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.2&&abs(MARKER[Marker_index].y-ROBOT.y)<0.2)
     {
         if(Marker_index==marker_num)
         {
