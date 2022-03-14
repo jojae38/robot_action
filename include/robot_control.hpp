@@ -103,6 +103,9 @@ class Pioneer
     double robot_adjust_th;
     //
     bool mode_change;
+    bool marker_change;
+    int prev_marker;
+    int marker;
     int prev_mode;
     int mode;
     int prev_Marker_mode;
@@ -196,10 +199,15 @@ class Pioneer
   
 Pioneer::Pioneer()
 { 
+    prev_mode=MODE::Stop;
     mode=MODE::Stop;
+
+    prev_marker=MARKER_MODE::No_Marker;
+    Marker_mode=MARKER_MODE::No_Marker;
+
     pause_stat=false;
     start_stat=false;
-    prev_mode=MODE::Stop;
+    
     test_count=0;
     cv::VideoCapture cap(0);
     if(!cap.isOpened())
@@ -373,29 +381,29 @@ void Pioneer::is_marker_on_sight()//90% of marker is shown
     else
     {
         if(MARKER_pixel>=MARKER_FULL_num*0.9)//90% of Marker is shown
-    {
-        Marker_mode=MARKER_MODE::Goto_Marker;
-     
+        {
+            Marker_mode=MARKER_MODE::Goto_Marker;
+        }
+        else if(MARKER_pixel>=MARKER_FULL_num*0.85&&Marker_mode==MARKER_MODE::Goto_Marker)//hysteresis - Goto
+        {
+            Marker_mode=MARKER_MODE::Goto_Marker;
+        }
+        else if(MARKER_pixel>=MARKER_FULL_num*0.15)//15% of Marker is shown
+        {
+            Marker_mode=MARKER_MODE::Find_Marker;
+        }
+        else if(MARKER_pixel>=MARKER_FULL_num*0.1&&Marker_mode==MARKER_MODE::Find_Marker)//hysteresis - Find
+        {
+            Marker_mode=MARKER_MODE::Find_Marker;
+        }
+        else
+        {
+            Marker_mode=MARKER_MODE::No_Marker;
+            Find_Marker_once=false;
+            Goto_Marker_once=false;
+            Complete_Marker_once=false;
+        }
     }
-    else if(MARKER_pixel>=MARKER_FULL_num*0.85&&Marker_mode==MARKER_MODE::Goto_Marker)//hysteresis - Goto
-    {
-        Marker_mode=MARKER_MODE::Goto_Marker;
-    }
-    else if(MARKER_pixel>=MARKER_FULL_num*0.15)//15% of Marker is shown
-    {
-        Marker_mode=MARKER_MODE::Find_Marker;
-    }
-    else if(MARKER_pixel>=MARKER_FULL_num*0.1&&Marker_mode==MARKER_MODE::Find_Marker)//hysteresis - Find
-    {
-        Marker_mode=MARKER_MODE::Find_Marker;
-    }
-    else
-    {
-        Marker_mode=MARKER_MODE::No_Marker;
-    }
-
-    }
-    
 }
 bool Pioneer::set_mode(int num)
 {
@@ -465,10 +473,10 @@ bool Pioneer::run_camera()
         cam_real_y_pos/=1754.4;
         cam_real_dis=sqrt(cam_real_x_pos*cam_real_x_pos+cam_real_y_pos*cam_real_y_pos);
         // cam_real_x_pos+=Robot_center_to_camera_center;
-        cam_real_th=tan(cam_real_y_pos/cam_real_x_pos);
-        cout <<"AD_x: "<<cam_real_x_pos<<endl;
-        cout <<"AD_y: "<<cam_real_y_pos<<endl;
-        cout <<"AD_TH: "<<cam_real_th<<endl;
+        cam_real_th=atan2(cam_real_y_pos,cam_real_x_pos+Robot_center_to_camera_center);
+        // cout <<"AD_x: "<<cam_real_x_pos<<endl;
+        // cout <<"AD_y: "<<cam_real_y_pos<<endl;
+        // cout <<"AD_TH: "<<cam_real_th<<endl;
         
         int size=150;
         POSITION Max_x,Max_y,Min_x,Min_y;
@@ -634,6 +642,21 @@ void Pioneer::visualize()
     //Make blank map
     cv::Mat map(cv::Size(Map.map_row,Map.map_col),CV_8UC3,{0,0,0});
     //Make grid map
+
+    count++;
+        if(count==10)
+        {
+            count=0;
+            
+            PATH_index%=100;
+            PATH_index++;
+            if(PATH.size()<100)
+            PATH.push_back(ROBOT);
+            else
+            {
+                PATH[PATH_index]=ROBOT;
+            }
+        }
     for(int i=1;i<Map.cross;i++)
     {
         for(int k=0;k<Map.map_col;k++)
@@ -875,25 +898,19 @@ void Pioneer::run_robot()
         std_msgs::Bool FALSE_msgs;
         FALSE_msgs.data=false;
         TRUE_msgs.data=true;
-        count++;
-        if(count==10)
-        {
-            count=0;
-            PATH_index%=100;
-            
-            if(PATH.size()<100)
-            PATH.push_back(ROBOT);
-            else
-            {
-                PATH[PATH_index]=ROBOT;
-            }
-        }
+        marker_change=false;
         mode_change=false;
         if(mode!=prev_mode)
         {
             ROS_INFO("MODE_CHANGE TO %d",mode);
             mode_change=true;
             prev_mode=mode;
+        }
+        if(Marker_mode!=prev_marker)
+        {
+            ROS_INFO("MARKER MODE_CHANGE TO %d",Marker_mode);
+            marker_change=true;
+            prev_marker=Marker_mode;
         }
         run_camera();
         visualize();
@@ -942,12 +959,17 @@ void Pioneer::run_robot()
         }
         else if(Marker_mode==MARKER_MODE::Find_Marker)
         {
+            // Find_Marker_once=false;
+            cout << Find_Marker_once<<endl;
+            // cout << cam_real_th<<endl;
             if(Find_Marker_once==false)
-            {adjust_th(cam_real_th);}
+            {
+                adjust_th(-cam_real_th);
+            }
             Find_Marker_once=true;
-            mode=MODE::Front;
+            // mode=MODE::Front;
             pub_geometry_twist_val(marker_pose_temp);
-            ROS_INFO("SEE MARKER");
+            // ROS_INFO("SEE MARKER");
         }
         else if(Marker_mode==MARKER_MODE::No_Marker)
         {
