@@ -436,10 +436,10 @@ bool Pioneer::run_camera()
     // undistort(un_proceed_frame,frame,camMatrix,distCoeffs);
     
     int marker_value=0;
-    
+    cam_real_th=0;
     cv::Mat mod_frame;
     cv::cvtColor(frame,mod_frame,cv::COLOR_BGR2HSV);
-    if(Marker_mode==MARKER_MODE::Find_Marker||Marker_mode==MARKER_MODE::Goto_Marker)
+    if(Marker_mode==MARKER_MODE::No_Marker||Marker_mode==MARKER_MODE::Find_Marker||Marker_mode==MARKER_MODE::Goto_Marker)
     {
         double x_pos=0;
         double y_pos=0;
@@ -563,38 +563,38 @@ bool Pioneer::run_camera()
         
         MARKER_pixel=marker_value;
     }/*HSV*/
-    else
-    {
-        for(int i=1;i<frame.rows-1;i++)
-        {
-            for(int j=1;j<frame.cols-1;j++)
-            {
-                int H=mod_frame.at<cv::Vec3b>(i,j)[0];
-                int S=mod_frame.at<cv::Vec3b>(i,j)[1];
-                int V=mod_frame.at<cv::Vec3b>(i,j)[2];
-                // cout <<"H: "<< H<<endl;
-                // cout <<"S: "<< S<<endl;
-                // cout <<"V: "<< V<<endl;
-                    //            if(H<10)
-                    // {
-                    //     frame.at<cv::Vec3b>(i,j)={0,0,255};
-                    // }
-                // if(110>=H&&H>=90&&S<145&&V<240&&V>205)
-                // {
-                //     frame.at<cv::Vec3b>(i,j)={0,255,0};
-                // }    
-                if(120>=H&&H>=98&&S>105&&V>125)
-                {
-                    frame.at<cv::Vec3b>(i,j)={0,0,255};
-                    // cout <<S<<endl;
-                    marker_value++;
-                }    
-            }
-        }
-        MARKER_pixel=marker_value;
-    // ROS_INFO("Marker_value %d",MARKER_pixel);
-    // number++;
-    }
+    // else
+    // {
+    //     for(int i=1;i<frame.rows-1;i++)
+    //     {
+    //         for(int j=1;j<frame.cols-1;j++)
+    //         {
+    //             int H=mod_frame.at<cv::Vec3b>(i,j)[0];
+    //             int S=mod_frame.at<cv::Vec3b>(i,j)[1];
+    //             int V=mod_frame.at<cv::Vec3b>(i,j)[2];
+    //             // cout <<"H: "<< H<<endl;
+    //             // cout <<"S: "<< S<<endl;
+    //             // cout <<"V: "<< V<<endl;
+    //                 //            if(H<10)
+    //                 // {
+    //                 //     frame.at<cv::Vec3b>(i,j)={0,0,255};
+    //                 // }
+    //             // if(110>=H&&H>=90&&S<145&&V<240&&V>205)
+    //             // {
+    //             //     frame.at<cv::Vec3b>(i,j)={0,255,0};
+    //             // }    
+    //             if(120>=H&&H>=98&&S>105&&V>125)
+    //             {
+    //                 frame.at<cv::Vec3b>(i,j)={0,0,255};
+    //                 // cout <<S<<endl;
+    //                 marker_value++;
+    //             }    
+    //         }
+    //     }
+    //     MARKER_pixel=marker_value;
+    // // ROS_INFO("Marker_value %d",MARKER_pixel);
+    // // number++;
+    // }
     //For Calculate
     // for(int i=0;i<frame.rows;i++)
     // {
@@ -912,10 +912,11 @@ void Pioneer::run_robot()
             marker_change=true;
             prev_marker=Marker_mode;
         }
+        is_marker_on_sight();
         run_camera();
         visualize();
         cv::waitKey(10)==27;
-        is_marker_on_sight();
+        
         
         marker_pass.publish(FALSE_msgs);
         // Marker
@@ -960,11 +961,12 @@ void Pioneer::run_robot()
         else if(Marker_mode==MARKER_MODE::Find_Marker)
         {
             // Find_Marker_once=false;
-            cout << Find_Marker_once<<endl;
+            // cout << Find_Marker_once<<endl;
             // cout << cam_real_th<<endl;
             if(Find_Marker_once==false)
             {
-                adjust_th(-cam_real_th);
+                cout <<cam_real_th<<endl;
+                adjust_th(cam_real_th);
             }
             Find_Marker_once=true;
             // mode=MODE::Front;
@@ -1130,25 +1132,26 @@ void Pioneer::robot_poscallback(const geometry_msgs::Pose::ConstPtr &msg)
 }
 void Pioneer::adjust_th(double th)
 {
-    double time_duration=abs(th)/angle_speed;
+    double angle=th;
+    double time_duration=abs(angle)/angle_speed;
     
     compare_time_1=ros::Time::now();
     compare_time_2=ros::Time::now();
     ROS_INFO("%f",time_duration);
     while(compare_time_1.sec+time_duration>=compare_time_2.sec)
     {   
+        if(time_duration<0.2)
+        {
+            break;
+        }
         compare_time_2=ros::Time::now();
-        if(th>0.1)
+        if(angle>0)
         {
             Pioneer::turn_left();
         }
-        else if(th<-0.1)
-        {
-            Pioneer::turn_right();
-        }
         else
         {
-            break;
+            Pioneer::turn_right();
         }
         cmd_vel_pub.publish(vel_msg);
     }
