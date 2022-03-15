@@ -492,9 +492,9 @@ bool Pioneer::run_camera()
         // cam_real_x_pos+=Robot_center_to_camera_center;
         cam_real_th=atan2(cam_real_y_pos,cam_real_x_pos+Robot_center_to_camera_center);
         // cam_real_th=acos(-cam_real_y_pos/cam_real_dis)-PI/2.0;
-        // cout <<"AD_x: "<<cam_real_x_pos<<endl;
-        // cout <<"AD_y: "<<cam_real_y_pos<<endl;
-        // cout <<"AD_TH: "<<cam_real_th<<endl;
+        cout <<"AD_x: "<<cam_real_x_pos<<endl;
+        cout <<"AD_y: "<<cam_real_y_pos<<endl;
+        cout <<"AD_TH: "<<cam_real_th<<endl;
         
         int size=150;
         POSITION Max_x,Max_y,Min_x,Min_y;
@@ -820,8 +820,8 @@ double Pioneer::is_direction_match()
     //     }
     // }
     
-    temp_th=-temp_th+ROBOT.th;
-    if(abs(temp_th)>PI/4-0.1)
+    temp_th=-temp_th+ROBOT.th+robot_adjust_th;
+    if(abs(temp_th)>PI/4-0.2)
     {
         large_turn=true;
     }
@@ -988,6 +988,21 @@ void Pioneer::run_robot()
             {
                 
             }
+            if(abs(cam_real_y_pos)<0.05)
+            {
+                mode=MODE::Front;
+                ROS_INFO("F");
+            }
+            else if(cam_real_y_pos<=-0.05)
+            {
+                mode=MODE::Right;
+                ROS_INFO("R");
+            }
+            else
+            {
+                mode=MODE::Left;
+                ROS_INFO("L");
+            }
             Goto_Marker_once=true;
             mode=MODE::Front;
             pub_geometry_twist_val(marker_pose_temp);
@@ -1015,21 +1030,21 @@ void Pioneer::run_robot()
         }
         
         
-        if(adjust_th_called==true)
-        {
-            cout <<cam_real_th<<endl;
-            if(adjust_th(cam_real_th,time_duration_th))
-            {
-                // marker_pass.publish(TRUE_msgs);
-                // pos_spin_after.publish(TRUE_msgs);
-                adjust_th_called=false;
-                ROS_INFO("th complete");
-            }
-            else
-            {
+        // if(adjust_th_called==true)
+        // {
+        //     cout <<cam_real_th<<endl;
+        //     if(adjust_th(cam_real_th,time_duration_th))
+        //     {
+        //         // marker_pass.publish(TRUE_msgs);
+        //         // pos_spin_after.publish(TRUE_msgs);
+        //         adjust_th_called=false;
+        //         ROS_INFO("th complete");
+        //     }
+        //     else
+        //     {
                 
-            }
-        }
+        //     }
+        // }
         pos_spin_prev.publish(FALSE_msgs);
         pos_spin_after.publish(FALSE_msgs);
         if(adjust_x_called==true&&adjust_th_called==false)
