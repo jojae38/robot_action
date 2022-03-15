@@ -16,6 +16,8 @@
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int8.h>
+#include <string.h>
+#include <stdio.h>
 
 using namespace std;
 
@@ -53,7 +55,7 @@ ros::Subscriber robot_pos;
 
 //SERVER
 ros::Subscriber stop_status;
-
+ros::Publisher feedback;
 ros::Subscriber start_status;
 ros::Publisher robot_result;
 ros::Publisher robot_feedback;
@@ -130,7 +132,8 @@ class Pioneer
     struct POSITION ROBOT_POS;
     struct Visual_Map Map;
     geometry_msgs::Twist vel_msg;
-    nav_msgs::Odometry odom_msg;
+    // nav_msgs::Odometry odom_msg;
+    geometry_msgs::Pose odom_msg;
 
     int count;
     int test_count;
@@ -169,7 +172,7 @@ class Pioneer
     void stop();
     void back();
     void run_robot();
-    bool update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg);
+    bool update_ROBOT_Position(const geometry_msgs::Pose::ConstPtr &msg);
     void add_path_or_marker(vector<POSITION> &Pos, double x,double y,int order_num);
 
     void calc_adjust_val();//When Marker is 15% shown do adjust_th first then adjust_x
@@ -184,7 +187,8 @@ class Pioneer
     void keycallback(const std_msgs::Char::ConstPtr &msg);
     void pausecallback(const std_msgs::String::ConstPtr &msg);
     void startcallback(const std_msgs::String::ConstPtr &msg);
-    void odomcallback(const nav_msgs::Odometry::ConstPtr &msg);
+    // void odomcallback(const nav_msgs::Odometry::ConstPtr &msg);
+    void odomcallback(const geometry_msgs::Pose::ConstPtr &msg); 
 
     void correctioncallback(const std_msgs::Bool::ConstPtr &msg);
     void camera_poscallback(const geometry_msgs::Pose::ConstPtr &msg);
@@ -201,6 +205,7 @@ class Pioneer
     void draw_robot_at(double x,double y,double th,cv::Mat *map);
     void draw_marker_at(double x,double y,cv::Mat &map,struct COLOR color);
     void draw_path_at(double x,double y,cv::Mat &map,struct COLOR color);
+    void put_text(cv::Mat& map,string text,cv::Point point,int font,double size,cv::Scalar value);
     int convert_world_pos_x(double x);
     int convert_world_pos_y(double y);
 };
@@ -264,12 +269,13 @@ void Pioneer::Get_param()
     key_input=nh_.subscribe("key_input",10,&Pioneer::keycallback,this);
     stop_status=nh_.subscribe("/pause",1,&Pioneer::pausecallback,this);
     start_status=nh_.subscribe("/Start",1,&Pioneer::startcallback,this);
-    odom_status=nh_.subscribe("/RosAria/pose",1,&Pioneer::odomcallback,this);
+    // odom_status=nh_.subscribe("/RosAria/pose",1,&Pioneer::odomcallback,this);
+    odom_status=nh_.subscribe("/robot_pose",1,&Pioneer::odomcallback,this);
     cmd_vel_pub=nh_.advertise<geometry_msgs::Twist>("/RosAria/cmd_vel",10);
     // cmd_vel_cal=nh_.advertise<geometry_msgs::Twist>("",10);
     //Server
-    robot_result=nh_.advertise<std_msgs::String>("",1);
-    robot_feedback=nh_.advertise<std_msgs::String>("",10);
+    robot_result=nh_.advertise<std_msgs::String>("result",1);
+    robot_feedback=nh_.advertise<std_msgs::String>("feedback",10);
     //SH_LEE
     marker_on_sight=nh_.advertise<std_msgs::Bool>("Marker_onsight",1);
     marker_center=nh_.advertise<std_msgs::Bool>("Marker_center",1);
@@ -703,6 +709,14 @@ void Pioneer::visualize()
     
     // //Print Robot
     Pioneer::draw_robot_at(convert_world_pos_y(ROBOT.x),convert_world_pos_x(-ROBOT.y),ROBOT.th,&map);
+    COLOR word;
+    set_color(word,255,0,0,0);
+    int gap=20;
+    
+    put_text(map,"X_val ["+to_string(ROBOT.x)+"]",cv::Point(10,30),4,0.6,cv::Scalar(word.B,word.G,word.R));
+    put_text(map,"Y_val ["+to_string(ROBOT.y)+"]",cv::Point(10,30+gap*1),4,0.6,cv::Scalar(word.B,word.G,word.R));
+    put_text(map,"Z_val ["+to_string(ROBOT.th)+"]",cv::Point(10,30+gap*2),4,0.6,cv::Scalar(word.B,word.G,word.R));
+    put_text(map,"Next_Marker ["+to_string(Marker_index+1)+"]",cv::Point(10,30+gap*3),4,0.6,cv::Scalar(word.B,word.G,word.R));
     cv::namedWindow("map");
     cv::moveWindow("map",865,0);
     cv::imshow("map",map);
@@ -977,6 +991,7 @@ void Pioneer::run_robot()
                 time_duration_x=abs(0.42)/speed;
                 pub_geometry_twist_val(marker_pose_temp);
                 marker_center.publish(TRUE_msgs);
+                Marker_index++;
                 adjust_x_called=true;
                 Complete_Marker_once=true;
             }
@@ -1105,20 +1120,36 @@ void Pioneer::run_robot()
         //     Pioneer::stop();
         // }
         cmd_vel_pub.publish(vel_msg);
+        std_msgs::String feedback_msgs;
+        feedback_msgs.data="Current Marker : "+to_string(Marker_index);
+        robot_feedback.publish(feedback_msgs);
         // mode=MODE::Stop;
         rate.sleep();
         ros::spinOnce();
     }
 }
-bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
+// bool Pioneer::update_ROBOT_Position(const nav_msgs::Odometry::ConstPtr &msg)
+// {
+//     //MATCH THIS DATA TO ROSARIA/POSE DATA
+//     //x and y is ok but oriantation w? z? th is unstable rotate 90 degree and compare
+//     odom_msg=*msg;
+//     ROBOT.x=msg->pose.pose.position.x;
+//     ROBOT.y=msg->pose.pose.position.y;
+//     tf::Pose pose;
+//     tf::poseMsgToTF(msg->pose.pose,pose);
+//     //Turn Quaternion to Euler
+//     ROBOT.th=tf::getYaw(pose.getRotation());
+//     return true;
+// }
+bool Pioneer::update_ROBOT_Position(const geometry_msgs::Pose::ConstPtr &msg)
 {
     //MATCH THIS DATA TO ROSARIA/POSE DATA
     //x and y is ok but oriantation w? z? th is unstable rotate 90 degree and compare
     odom_msg=*msg;
-    ROBOT.x=msg->pose.pose.position.x;
-    ROBOT.y=msg->pose.pose.position.y;
+    ROBOT.x=msg->position.x;
+    ROBOT.y=msg->position.y;
     tf::Pose pose;
-    tf::poseMsgToTF(msg->pose.pose,pose);
+    tf::poseMsgToTF(*msg,pose);
     //Turn Quaternion to Euler
     ROBOT.th=tf::getYaw(pose.getRotation());
     return true;
@@ -1186,7 +1217,14 @@ void Pioneer::startcallback(const std_msgs::String::ConstPtr &msg)
         start_stat=false;
     }
 }
-void Pioneer::odomcallback(const nav_msgs::Odometry::ConstPtr &msg)
+// void Pioneer::odomcallback(const nav_msgs::Odometry::ConstPtr &msg)
+// {
+//     odom_msg=*msg;
+//     update_ROBOT_Position(msg);
+//     // cout <<ROBOT.th<<endl;
+// }
+
+void Pioneer::odomcallback(const geometry_msgs::Pose::ConstPtr &msg)
 {
     odom_msg=*msg;
     update_ROBOT_Position(msg);
@@ -1290,19 +1328,25 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
 }
 bool Pioneer::is_marker_match()
 {
-    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.2&&abs(MARKER[Marker_index].y-ROBOT.y)<0.2)
-    {
-        if(Marker_index==marker_num)
+    if(Marker_index==marker_num)
         {
             ROS_INFO("arrive %d",Marker_index);
             Arrive=true;
             mode=MODE::Stop;
         }
-        else
-        {
-            ROS_INFO("Passed MARKER %d Heading to MARKER %d",Marker_index,Marker_index+1);
-            Marker_index++;
-        }
+    if(abs(MARKER[Marker_index].x-ROBOT.x)<0.2&&abs(MARKER[Marker_index].y-ROBOT.y)<0.2)
+    {
+        // if(Marker_index==marker_num)
+        // {
+        //     ROS_INFO("arrive %d",Marker_index);
+        //     Arrive=true;
+        //     mode=MODE::Stop;
+        // }
+        // else
+        // {
+        //     ROS_INFO("Passed MARKER %d Heading to MARKER %d",Marker_index,Marker_index+1);
+        //     Marker_index++;
+        // }
         return true;
     }
     return false;
@@ -1311,4 +1355,8 @@ bool Pioneer::is_marker_match()
         order_index++;
         // marker_pass.publish(TRUE_msgs);
     }
+}
+void Pioneer::put_text(cv::Mat& map,string text,cv::Point point,int font,double size,cv::Scalar value)
+{
+    cv::putText(map,text,point,font,size,value);
 }

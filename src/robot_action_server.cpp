@@ -1,5 +1,6 @@
 #include "robot_control.hpp"
 string order;
+
 ros::Publisher start;
 ros::Subscriber server_feedback;
 ros::Subscriber server_result;
@@ -13,18 +14,27 @@ class Robot_Action
     robot_action::robot_actionFeedback feedback_;
     robot_action::robot_actionResult result_;
     std_msgs::String start_msg;
+    string feedback_temp;
+    string result_temp;
     public:
 
     Robot_Action(std::string name):as_(nh_,name,boost::bind(&Robot_Action::executeCB,this,_1),false),action_name_(name)
     {
-      
+      server_feedback=nh_.subscribe("feedback",10,&Robot_Action::feedbackcallback,this);
+      server_result=nh_.subscribe("result",10,&Robot_Action::resultcallback,this);
+      feedback_temp=" ";
+      result_temp=" ";
+
+      // server_result=nh_.s
       as_.start();
     }
     ~Robot_Action(void)
     {}
-
+    void feedbackcallback(const std_msgs::String::ConstPtr &msg);
+    void resultcallback(const std_msgs::String::ConstPtr &msg);
     void executeCB(const robot_action::robot_actionGoalConstPtr &goal)
     {
+      
       start=nh_.advertise<std_msgs::String>("/Start",1);
       start_msg.data="start";
       ros::Rate r(2);
@@ -47,8 +57,9 @@ class Robot_Action
         {
           if(order=="start")
           {
+            // string feedback=
             ROS_INFO("run");
-            feedback_.sequence="aaa";
+            feedback_.sequence=feedback_temp;
             start_msg.data="start";
             start.publish(start_msg);
             as_.publishFeedback(feedback_);
@@ -57,7 +68,7 @@ class Robot_Action
           else
           {
             ROS_INFO("waiting");
-            feedback_.sequence="bbb";
+            feedback_.sequence=feedback_temp;
             start_msg.data="stop";
             start.publish(start_msg);
             as_.publishFeedback(feedback_);
@@ -75,4 +86,12 @@ int main(int argc, char ** argv)
   ros::spin();
 
   return 0;
+}
+void Robot_Action::feedbackcallback(const std_msgs::String::ConstPtr &msg)
+{
+  feedback_temp = msg->data;
+}
+void Robot_Action::resultcallback(const std_msgs::String::ConstPtr &msg)
+{
+  result_temp= msg->data;
 }
