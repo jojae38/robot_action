@@ -4,6 +4,7 @@ string order;
 ros::Publisher start;
 ros::Subscriber server_feedback;
 ros::Subscriber server_result;
+
 class Robot_Action
 {
     protected:
@@ -16,6 +17,7 @@ class Robot_Action
     std_msgs::String start_msg;
     string feedback_temp;
     string result_temp;
+    bool pushed;
     public:
 
     Robot_Action(std::string name):as_(nh_,name,boost::bind(&Robot_Action::executeCB,this,_1),false),action_name_(name)
@@ -24,6 +26,7 @@ class Robot_Action
       server_result=nh_.subscribe("result",10,&Robot_Action::resultcallback,this);
       feedback_temp=" ";
       result_temp=" ";
+      pushed=false;
 
       // server_result=nh_.s
       as_.start();
@@ -61,7 +64,10 @@ class Robot_Action
             ROS_INFO("run");
             feedback_.sequence=feedback_temp;
             start_msg.data="start";
-            start.publish(start_msg);
+            if(pushed==false)
+            {
+               start.publish(start_msg);
+            }
             as_.publishFeedback(feedback_);
             //robot 위치 감지
           }

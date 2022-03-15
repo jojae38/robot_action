@@ -1044,7 +1044,7 @@ void Pioneer::run_robot()
         }
         else if(Marker_mode==MARKER_MODE::No_Marker)
         {
-            // is_direction_match();
+            is_direction_match();
         }
         
         
@@ -1114,11 +1114,12 @@ void Pioneer::run_robot()
         //     mode=MODE::Stop;
         //     Pioneer::stop();
         // }
-        // if(!start_stat||pause_stat||Arrive)
-        // {
-        //     mode=MODE::Stop;
-        //     Pioneer::stop();
-        // }
+        if(!start_stat||pause_stat||Arrive)
+        {
+            mode=MODE::Stop;
+            Pioneer::stop();
+        }
+        ROS_INFO("%d",mode);
         cmd_vel_pub.publish(vel_msg);
         std_msgs::String feedback_msgs;
         feedback_msgs.data="Current Marker : "+to_string(Marker_index);
