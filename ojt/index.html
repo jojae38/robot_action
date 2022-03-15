@@ -30,7 +30,7 @@
         var actionNodeClient = new ROSLIB.ActionClient({
             ros: ros,
             serverName: "/ojtAction", //액션서버 이름
-            actionName: "robot_action/robot_action", //정해진 액션 파일 이름
+            actionName: "robot_action/robot_actionAction", //정해진 액션 파일 이름
         });
 
         var goal = new ROSLIB.Goal({
@@ -52,7 +52,7 @@
 
         goal.on("feedback", function (feedback) {
             console.log("Feedback: " + feedback.sequence);
-            
+            document.getElementById("status_value").innerHTML = feedback.sequence;
         });
 
         goal.on("result", function (result) {
@@ -61,6 +61,7 @@
             
         });
 
+        
         function start() {
             goal.send();
             console.log("Start");
