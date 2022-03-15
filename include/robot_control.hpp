@@ -492,9 +492,9 @@ bool Pioneer::run_camera()
         // cam_real_x_pos+=Robot_center_to_camera_center;
         cam_real_th=atan2(cam_real_y_pos,cam_real_x_pos+Robot_center_to_camera_center);
         // cam_real_th=acos(-cam_real_y_pos/cam_real_dis)-PI/2.0;
-        cout <<"AD_x: "<<cam_real_x_pos<<endl;
-        cout <<"AD_y: "<<cam_real_y_pos<<endl;
-        cout <<"AD_TH: "<<cam_real_th<<endl;
+        // cout <<"AD_x: "<<cam_real_x_pos<<endl;
+        // cout <<"AD_y: "<<cam_real_y_pos<<endl;
+        // cout <<"AD_TH: "<<cam_real_th<<endl;
         
         int size=150;
         POSITION Max_x,Max_y,Min_x,Min_y;
@@ -988,19 +988,22 @@ void Pioneer::run_robot()
             {
                 
             }
-            if(abs(cam_real_y_pos)<0.05)
+            if(abs(cam_real_y_pos)<0.01)
             {
                 mode=MODE::Front;
+                go_front();
                 ROS_INFO("F");
             }
-            else if(cam_real_y_pos<=-0.05)
+            else if(cam_real_y_pos<=-0.01)
             {
                 mode=MODE::Right;
+                turn_right();
                 ROS_INFO("R");
             }
             else
             {
                 mode=MODE::Left;
+                turn_left();
                 ROS_INFO("L");
             }
             Goto_Marker_once=true;
@@ -1030,27 +1033,31 @@ void Pioneer::run_robot()
         }
         
         
-        // if(adjust_th_called==true)
-        // {
-        //     cout <<cam_real_th<<endl;
-        //     if(adjust_th(cam_real_th,time_duration_th))
-        //     {
-        //         // marker_pass.publish(TRUE_msgs);
-        //         // pos_spin_after.publish(TRUE_msgs);
-        //         adjust_th_called=false;
-        //         ROS_INFO("th complete");
-        //     }
-        //     else
-        //     {
+        if(adjust_th_called==true)
+        {
+            cout <<cam_real_th<<endl;
+            if(adjust_th(cam_real_th,time_duration_th))
+            {
+                // marker_pass.publish(TRUE_msgs);
+                // pos_spin_after.publish(TRUE_msgs);
+                mode=MODE::Front;
+                go_front();
+                adjust_th_called=false;
+                ROS_INFO("th complete");
+            }
+            else
+            {
                 
-        //     }
-        // }
+            }
+        }
         pos_spin_prev.publish(FALSE_msgs);
         pos_spin_after.publish(FALSE_msgs);
         if(adjust_x_called==true&&adjust_th_called==false)
         {
             if(adjust_x(0.42,time_duration_x))
             {
+                mode=MODE::Stop;
+                
                 adjust_x_called=false;
                 ROS_INFO("x complete");
             }
@@ -1218,15 +1225,17 @@ bool Pioneer::adjust_th(double th,double time_duration)
     if(compare_time_1.sec+time_duration>=compare_time_2.sec)
     {   
         compare_time_2=ros::Time::now();
-        if(angle<0)
+        if(angle>0)
         {
+            mode=MODE::Left;
             Pioneer::turn_left();
         }
         else
         {
+            mode=MODE::Right;
             Pioneer::turn_right();
         }
-        cmd_vel_pub.publish(vel_msg);
+        // cmd_vel_pub.publish(vel_msg);
         return false;
     }
     else
@@ -1242,13 +1251,15 @@ bool Pioneer::adjust_x(double x,double time_duration)
         compare_time_2=ros::Time::now();
         if(x>0)
         {
+            mode=MODE::Front;
             Pioneer::go_front();
         }
         else if(x<0)
         {
+            mode=MODE::Back;
             Pioneer::back();
         }
-        cmd_vel_pub.publish(vel_msg);
+        // cmd_vel_pub.publish(vel_msg);
         return false;
     }
     else
