@@ -948,16 +948,10 @@ void Pioneer::run_robot()
         run_camera();
         visualize();
         cv::waitKey(10)==27;
-        marker_center.publish(FALSE_msgs);
-        marker_pass.publish(FALSE_msgs);
         // Marker
         if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
             marker_on_sight.publish(TRUE_msgs);
-        }
-        else
-        {
-            marker_on_sight.publish(FALSE_msgs);
         }
         if(Marker_mode==MARKER_MODE::Complete_Marker)
         {
@@ -1041,8 +1035,6 @@ void Pioneer::run_robot()
                 
             }
         }
-        pos_spin_prev.publish(FALSE_msgs);
-        pos_spin_after.publish(FALSE_msgs);
         if(adjust_x_called==true&&adjust_th_called==false)
         {
             if(adjust_x(0.42,time_duration_x))
