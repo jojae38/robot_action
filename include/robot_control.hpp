@@ -954,7 +954,7 @@ void Pioneer::run_robot()
         // cout << cam_real_th<<endl;
         visualize();
         cv::waitKey(10)==27;
-    
+        marker_center.publish(FALSE_msgs);
         marker_pass.publish(FALSE_msgs);
         // Marker
         if(Marker_mode==MARKER_MODE::Goto_Marker)
@@ -1007,7 +1007,7 @@ void Pioneer::run_robot()
                 ROS_INFO("L");
             }
             Goto_Marker_once=true;
-            mode=MODE::Front;
+            // mode=MODE::Front;
             pub_geometry_twist_val(marker_pose_temp);
             // ROS_INFO("SEE MOST MARKER");
         }
@@ -1057,7 +1057,7 @@ void Pioneer::run_robot()
             if(adjust_x(0.42,time_duration_x))
             {
                 mode=MODE::Stop;
-                
+                marker_pass.publish(TRUE_msgs);
                 adjust_x_called=false;
                 ROS_INFO("x complete");
             }
@@ -1309,6 +1309,6 @@ bool Pioneer::is_marker_match()
     if(abs(Move_Order[order_index].x-ROBOT.x)<0.2&&abs(Move_Order[order_index].y-ROBOT.y)<0.2)
     {
         order_index++;
-        marker_pass.publish(TRUE_msgs);
+        // marker_pass.publish(TRUE_msgs);
     }
 }
