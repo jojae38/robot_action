@@ -253,8 +253,8 @@ Pioneer::Pioneer()
     set_color(MARKER_COLOR,290,-10,-10,100);
     set_color(ROBOT_COLOR_X,100,200,100,0);
     set_color(ROBOT_COLOR_Y,100,100,200,0);
-    set_color(ROBOT_COLOR_odom_X,50,100,50,0);
-    set_color(ROBOT_COLOR_odom_Y,50,100,250,0);
+    set_color(ROBOT_COLOR_odom_X,153,0,153,0);
+    set_color(ROBOT_COLOR_odom_Y,102,204,255,0);
     set_color(ORDER_COLOR,20,20,235,0);
     set_color(PATH_COLOR,10,225,10,0);
     set_Position(ROBOT,0,0,0);
@@ -834,11 +834,6 @@ double Pioneer::is_direction_match()
     temp_th=-temp_th+ROBOT.th+robot_adjust_th;
     if(abs(temp_th)>PI/2-0.2)
     {
-        if(turn_once==false)
-        {
-            pos_spin_prev.publish(TRUE_msgs);
-            turn_once=true;
-        }
         large_turn=true;
     }
     if(abs(temp_th)>=3.14)
@@ -1047,6 +1042,8 @@ void Pioneer::run_robot()
                 marker_pass.publish(TRUE_msgs);
                 adjust_x_called=false;
                 ROS_INFO("x complete");
+                if(large_turn)
+                    pos_spin_prev.publish(TRUE_msgs);
             }
             else
             {
@@ -1055,7 +1052,10 @@ void Pioneer::run_robot()
         }
         //if you want to move this by pose 
         // RUN
-       
+        marker_center.publish(FALSE_msgs);
+        marker_pass.publish(FALSE_msgs);
+        pos_spin_prev.publish(FALSE_msgs);
+        pos_spin_after.publish(FALSE_msgs);
         if(mode==MODE::Stop)
         {
             Pioneer::stop();
@@ -1288,9 +1288,9 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
     else
         val.angular.z=ROBOT.th;
     {
-        if(Marker_index>=9)
+        if(Marker_index>=8)
         {val.angular.z=robot_adjust_th+PI/2;}
-        else if(Marker_index>=7)
+        else if(Marker_index>=6)
         val.angular.z=robot_adjust_th-PI;
         else if(Marker_index>=4)
         val.angular.z=robot_adjust_th+PI/2;
