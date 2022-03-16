@@ -19,7 +19,7 @@
         <param name="Marker10" type="string" value="2,-5"/>
         <!-- <param name="Marker11" type="string" value="2,-5"/> -->
         <!-- ORDER_POS -->
-        <param name="order_num" type="int" value="3"/>
+        <param name="order_num" type="int" value="0"/>
         <param name="Order1" type="string" value="4,0"/>
         <param name="Order2" type="string" value="4,-4"/>
         <param name="Order3" type="string" value="2,-4"/>

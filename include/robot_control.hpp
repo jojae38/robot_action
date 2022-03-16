@@ -836,6 +836,7 @@ double Pioneer::is_direction_match()
     temp_th=-temp_th+ROBOT.th+robot_adjust_th;
     if(abs(temp_th)>PI/2-0.2)
     {
+        
         large_turn=true;
     }
     if(abs(temp_th)>=3.14)
@@ -946,6 +947,8 @@ void Pioneer::run_robot()
         visualize();
         cv::waitKey(10)==27;
         // Marker
+        marker_center.publish(FALSE_msgs);
+        marker_pass.publish(FALSE_msgs);
         if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
             marker_on_sight.publish(TRUE_msgs);
@@ -958,6 +961,7 @@ void Pioneer::run_robot()
         {
             if(Complete_Marker_once==false)
             {
+
                 compare_time_1=ros::Time::now();
                 time_duration_x=abs(0.42)/speed;
                 pub_geometry_twist_val(marker_pose_temp);
@@ -1042,6 +1046,7 @@ void Pioneer::run_robot()
             {
                 mode=MODE::Stop;
                 marker_pass.publish(TRUE_msgs);
+                
                 adjust_x_called=false;
                 ROS_INFO("x complete");
                 if(large_turn)
@@ -1054,8 +1059,7 @@ void Pioneer::run_robot()
         }
         //if you want to move this by pose 
         // RUN
-        marker_center.publish(FALSE_msgs);
-        marker_pass.publish(FALSE_msgs);
+        
         pos_spin_prev.publish(FALSE_msgs);
         pos_spin_after.publish(FALSE_msgs);
         if(mode==MODE::Stop)
@@ -1078,11 +1082,11 @@ void Pioneer::run_robot()
         {
             Pioneer::back();
         }
-        if(!start_stat||pause_stat||Arrive)
-        {
-            mode=MODE::Stop;
-            Pioneer::stop();
-        }
+        // if(!start_stat||pause_stat||Arrive)
+        // {
+        //     mode=MODE::Stop;
+        //     Pioneer::stop();
+        // }
         // ROS_INFO("%d",mode);
         cmd_vel_pub.publish(vel_msg);
         std_msgs::String feedback_msgs;
@@ -1288,7 +1292,6 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
     if(Marker_mode>MARKER_MODE::Find_Marker)
         val.angular.z=robot_adjust_th+ROBOT.th;
     else
-        val.angular.z=ROBOT.th;
     {
         if(Marker_index>=8)
         {val.angular.z=robot_adjust_th+PI/2;}
