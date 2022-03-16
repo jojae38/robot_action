@@ -933,7 +933,7 @@ void Pioneer::run_robot()
             // ROS_INFO("MARKER MODE_CHANGE TO %d",Marker_mode);
             if(prev_marker==MARKER_MODE::Goto_Marker&&Marker_mode==MARKER_MODE::Complete_Marker)
             {
-                marker_center.publish(TRUE_msgs);
+                // marker_center.publish(TRUE_msgs);
                 ROS_INFO_STREAM("Marker_change center");
             }
             if(prev_marker==MARKER_MODE::Complete_Marker&&Marker_mode==MARKER_MODE::No_Marker)
@@ -952,6 +952,10 @@ void Pioneer::run_robot()
         if(Marker_mode==MARKER_MODE::Goto_Marker)
         {
             marker_on_sight.publish(TRUE_msgs);
+        }
+        else
+        {
+            marker_on_sight.publish(FALSE_msgs);
         }
         if(Marker_mode==MARKER_MODE::Complete_Marker)
         {
@@ -1283,6 +1287,16 @@ void Pioneer::pub_geometry_twist_val(geometry_msgs::Twist& val)
         val.angular.z=robot_adjust_th+ROBOT.th;
     else
         val.angular.z=ROBOT.th;
+    {
+        if(Marker_index>=9)
+        {val.angular.z=robot_adjust_th+PI/2;}
+        else if(Marker_index>=7)
+        val.angular.z=robot_adjust_th-PI;
+        else if(Marker_index>=4)
+        val.angular.z=robot_adjust_th+PI/2;
+
+    }
+        
     robot_marker_dis_pub.publish(val);
 }
 bool Pioneer::is_marker_match()
