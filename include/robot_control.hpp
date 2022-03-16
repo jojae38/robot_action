@@ -257,6 +257,7 @@ Pioneer::Pioneer()
     set_color(ROBOT_COLOR_odom_Y,102,204,255,0);
     set_color(ORDER_COLOR,20,20,235,0);
     set_color(PATH_COLOR,10,225,10,0);
+    set_color(PATH_odom_COLOR,100,255,100,0);
     set_Position(ROBOT,0,0,0);
     set_Visual_map(14,700,700);
     order_num=0;
@@ -714,6 +715,7 @@ void Pioneer::visualize()
     for(int i=0;i<Pioneer::PATH.size();i++)
     {
         Pioneer::draw_path_at(convert_world_pos_y(PATH[i].x),convert_world_pos_x(-PATH[i].y),map,PATH_COLOR);
+        Pioneer::draw_path_at(convert_world_pos_y(PATH_odom[i].x),convert_world_pos_x(-PATH_odom[i].y),map,PATH_odom_COLOR);
     }
     
     // Print Marker(whick is found)
@@ -745,8 +747,8 @@ void Pioneer::visualize()
 }
 void Pioneer::draw_robot_at(double x,double y,double th,cv::Mat *map,COLOR P_x,COLOR P_y)
 {
-    double cos_th=cos(ROBOT.th);
-    double sin_th=sin(ROBOT.th);
+    double cos_th=cos(th);
+    double sin_th=sin(th);
     
     for(int i=-30;i<-4;i++)
     {
